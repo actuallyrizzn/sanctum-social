@@ -1,0 +1,46 @@
+# Test Dependencies for Void Bot
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0  # Parallel test execution
+
+# Test utilities and fixtures
+factory-boy>=3.3.0  # Test data factories
+faker>=19.0.0  # Fake data generation
+responses>=0.23.0  # Mock HTTP requests
+httpx>=0.28.1  # HTTP client for mocking
+freezegun>=1.2.0  # Mock datetime/time
+
+# Code quality and coverage
+coverage>=7.2.0
+pytest-html>=3.2.0  # HTML test reports
+
+# Integration testing
+requests-mock>=1.11.0  # Mock requests library
+
+# Performance testing
+pytest-benchmark>=4.0.0  # Performance benchmarks
+
+# Async testing
+aioresponses>=0.7.4  # Mock async HTTP requests
+
+# Configuration testing
+pytest-env>=0.8.0  # Environment variable testing
+
+# Test data management
+pytest-datadir>=1.4.1  # Test data files
+
+# Reporting and visualization
+pytest-sugar>=0.9.7  # Better test output formatting
+
+# Security testing
+bandit>=1.7.5  # Security linting
+safety>=2.3.0  # Dependency vulnerability scanning
+
+# Type checking
+mypy>=1.5.0
+pytest-mypy>=0.10.0

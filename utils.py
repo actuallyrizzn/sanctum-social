@@ -61,7 +61,7 @@ def upsert_agent(letta: Letta, name: str, **kwargs):
         return new_agent
 
     if len(agents) > 1:
-        raise Exception(f"{len(agents)} agents by the label '{label}' retrieved, label must identify a unique agent")
+        raise Exception(f"{len(agents)} agents by the name '{name}' retrieved, name must identify a unique agent")
     
     else:
         existing_agent = agents[0]
