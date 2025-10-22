@@ -371,15 +371,12 @@ def frozen_time():
 
 
 @pytest.fixture
-def mock_logger():
-    """Provide a mock logger for testing."""
-    logger = Mock()
-    logger.info = Mock()
-    logger.debug = Mock()
-    logger.warning = Mock()
-    logger.error = Mock()
-    logger.critical = Mock()
-    return logger
+def notification_db(temp_dir):
+    """Create a NotificationDB instance with proper cleanup."""
+    from notification_db import NotificationDB
+    db_path = temp_dir / "test.db"
+    with NotificationDB(str(db_path)) as db:
+        yield db
 
 
 # Test data factories

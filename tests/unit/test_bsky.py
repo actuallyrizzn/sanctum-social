@@ -193,11 +193,12 @@ class TestInitializeVoid:
         mock_agent.tools = []  # Add tools attribute with length
         mock_client.agents.retrieve.return_value = mock_agent
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('bsky.logger') as mock_logger, \
+             patch('bsky.get_letta_config', return_value={'api_key': 'test-key', 'agent_id': 'test-agent-id', 'timeout': 30}):
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
-            with patch('bsky.CLIENT', mock_client):
+            with patch('bsky.Letta', return_value=mock_client):
                 result = initialize_void()
                 assert result == mock_agent
                 mock_client.agents.retrieve.assert_called_once()
@@ -207,11 +208,12 @@ class TestInitializeVoid:
         mock_client = Mock()
         mock_client.agents.retrieve.side_effect = Exception("Agent not found")
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('bsky.logger') as mock_logger, \
+             patch('bsky.get_letta_config', return_value={'api_key': 'test-key', 'agent_id': 'test-agent-id', 'timeout': 30}):
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
-            with patch('bsky.CLIENT', mock_client):
+            with patch('bsky.Letta', return_value=mock_client):
                 with pytest.raises(Exception, match="Agent not found"):
                     initialize_void()
 

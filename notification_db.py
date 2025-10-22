@@ -297,3 +297,16 @@ class NotificationDB:
         """Close database connection."""
         if self.conn:
             self.conn.close()
+            self.conn = None
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensure connection is closed."""
+        self.close()
+    
+    def __del__(self):
+        """Destructor - ensure connection is closed when object is garbage collected."""
+        self.close()
