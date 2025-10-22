@@ -16,6 +16,57 @@ class CheckKnownBotsArgs(BaseModel):
     handles: List[str] = Field(..., description="List of user handles to check against known_bots")
 
 
+def normalize_handle(handle: str) -> str:
+    """
+    Normalize handle for consistent comparison.
+    
+    Args:
+        handle: Handle to normalize
+        
+    Returns:
+        Normalized handle (lowercase, @ stripped, whitespace trimmed)
+    """
+    # First strip whitespace, then remove @ symbol, then strip again
+    return handle.strip().lstrip('@').strip().lower()
+
+
+def parse_bot_handles(content: str) -> List[str]:
+    """
+    Parse bot handles from various formats in the known_bots block content.
+    
+    Args:
+        content: Content of the known_bots memory block
+        
+    Returns:
+        List of normalized bot handles
+    """
+    handles = []
+    for line in content.split('\n'):
+        line = line.strip()
+        if line and not line.startswith('#'):
+            handle = None
+            
+            # Handle multiple formats:
+            # - @handle.bsky.social
+            # - @handle.bsky.social: description
+            # - handle.bsky.social
+            # - handle.bsky.social: description
+            if line.startswith('- @'):
+                handle = line[3:].split(':')[0].strip()
+            elif line.startswith('-'):
+                handle = line[1:].split(':')[0].strip()
+            elif line.startswith('@'):
+                handle = line[1:].split(':')[0].strip()
+            else:
+                # Handle lines without prefix
+                handle = line.split(':')[0].strip()
+            
+            if handle:
+                handles.append(normalize_handle(handle))
+    
+    return handles
+
+
 def check_known_bots(handles: List[str], agent_state: "AgentState") -> str:
     """
     Check if any of the provided handles are in the known_bots memory block.
@@ -58,39 +109,32 @@ def check_known_bots(handles: List[str], agent_state: "AgentState") -> str:
             })
         known_bots_content = known_bots_block.value
         
-        # Parse known bots from content
-        known_bot_handles = []
-        for line in known_bots_content.split('\n'):
-            line = line.strip()
-            if line and not line.startswith('#'):
-                # Extract handle from lines like "- @handle.bsky.social" or "- @handle.bsky.social: description"
-                if line.startswith('- @'):
-                    handle = line[3:].split(':')[0].strip()
-                    known_bot_handles.append(handle)
-                elif line.startswith('-'):
-                    handle = line[1:].split(':')[0].strip().lstrip('@')
-                    known_bot_handles.append(handle)
+        # Parse known bots from content using improved parsing logic
+        known_bot_handles = parse_bot_handles(known_bots_content)
         
-        # Normalize handles for comparison
-        normalized_input_handles = [h.lstrip('@').strip() for h in handles]
-        normalized_bot_handles = [h.strip() for h in known_bot_handles]
+        # Normalize input handles for consistent comparison
+        normalized_input_handles = [normalize_handle(h) for h in handles]
         
-        # Check for matches
+        # Check for matches (case-insensitive)
         detected_bots = []
-        for handle in normalized_input_handles:
-            if handle in normalized_bot_handles:
-                detected_bots.append(handle)
+        for i, normalized_handle in enumerate(normalized_input_handles):
+            if normalized_handle in known_bot_handles:
+                # Return the original handle format for user reference
+                detected_bots.append(handles[i])
         
         bot_detected = len(detected_bots) > 0
         
         return json.dumps({
             "bot_detected": bot_detected,
             "detected_bots": detected_bots,
-            "total_known_bots": len(normalized_bot_handles),
-            "checked_handles": normalized_input_handles
+            "total_known_bots": len(known_bot_handles),
+            "checked_handles": handles,  # Return original handles for reference
+            "normalized_checked_handles": normalized_input_handles,
+            "normalized_known_bots": known_bot_handles
         })
         
     except Exception as e:
+        logger.error(f"Error checking known_bots: {str(e)}")
         return json.dumps({
             "error": f"Error checking known_bots: {str(e)}",
             "bot_detected": False,

@@ -27,6 +27,7 @@ with patch('bsky_utils.dotenv.load_dotenv'):
         create_reasoning_record,
         STRIP_FIELDS
     )
+    from atproto_client import SessionEvent
 
 
 class TestConvertToBasicTypes:
@@ -134,21 +135,24 @@ class TestStripFields:
 
 
 class TestFlattenThreadStructure:
-    @pytest.mark.skip(reason="Complex thread structure mocking - integration test")
     def test_flatten_simple_thread(self):
         """Test flattening a simple thread structure."""
-        thread_data = Mock()
-        thread_data.thread = Mock()
-        thread_data.thread.post = {
-            "uri": "at://did:plc:test/post/1",
-            "text": "Original post"
-        }
-        thread_data.thread.replies = [
-            Mock()
-        ]
-        thread_data.thread.replies[0].post = {
-            "uri": "at://did:plc:test/post/2",
-            "text": "Reply 1"
+        # Create a proper thread structure without Mock objects to avoid recursion
+        thread_data = {
+            'thread': {
+                'post': {
+                    "uri": "at://did:plc:test/post/1",
+                    "text": "Original post"
+                },
+                'replies': [
+                    {
+                        'post': {
+                            "uri": "at://did:plc:test/post/2",
+                            "text": "Reply 1"
+                        }
+                    }
+                ]
+            }
         }
         
         result = flatten_thread_structure(thread_data)
@@ -160,30 +164,31 @@ class TestFlattenThreadStructure:
         assert result["posts"][1]["uri"] == "at://did:plc:test/post/2"
         assert result["posts"][1]["text"] == "Reply 1"
 
-    @pytest.mark.skip(reason="Complex thread structure mocking - integration test")
     def test_flatten_nested_replies(self):
         """Test flattening thread with nested replies."""
         thread_data = {
-            "post": {
-                "uri": "at://did:plc:test/post/1",
-                "text": "Original post"
-            },
-            "replies": [
-                {
-                    "post": {
-                        "uri": "at://did:plc:test/post/2",
-                        "text": "Reply 1"
-                    },
-                    "replies": [
-                        {
-                            "post": {
-                                "uri": "at://did:plc:test/post/3",
-                                "text": "Reply to reply"
+            'thread': {
+                "post": {
+                    "uri": "at://did:plc:test/post/1",
+                    "text": "Original post"
+                },
+                "replies": [
+                    {
+                        "post": {
+                            "uri": "at://did:plc:test/post/2",
+                            "text": "Reply 1"
+                        },
+                        "replies": [
+                            {
+                                "post": {
+                                    "uri": "at://did:plc:test/post/3",
+                                    "text": "Reply to reply"
+                                }
                             }
-                        }
-                    ]
-                }
-            ]
+                        ]
+                    }
+                ]
+            }
         }
         
         result = flatten_thread_structure(thread_data)
@@ -204,7 +209,6 @@ class TestFlattenThreadStructure:
 
 
 class TestThreadToYamlString:
-    @pytest.mark.skip(reason="Complex thread structure mocking - integration test")
     def test_thread_to_yaml_string_basic(self):
         """Test converting thread to YAML string."""
         thread_data = {
@@ -224,7 +228,6 @@ class TestThreadToYamlString:
         assert "Original post" in result
         assert "test.user.bsky.social" in result
 
-    @pytest.mark.skip(reason="Complex thread structure mocking - integration test")
     def test_thread_to_yaml_string_with_stripping(self):
         """Test converting thread to YAML with metadata stripping."""
         thread_data = {
@@ -245,7 +248,6 @@ class TestThreadToYamlString:
         assert "should_be_stripped" not in result
         assert "2025-01-01T00:00:00Z" not in result
 
-    @pytest.mark.skip(reason="Complex thread structure mocking - integration test")
     def test_thread_to_yaml_string_without_stripping(self):
         """Test converting thread to YAML without metadata stripping."""
         thread_data = {
@@ -268,7 +270,6 @@ class TestThreadToYamlString:
 
 
 class TestSessionManagement:
-    @pytest.mark.skip(reason="File system mocking issues - integration test")
     def test_get_session_existing_file(self, temp_dir):
         """Test getting session from existing file."""
         session_file = temp_dir / "session_test_user.txt"
@@ -287,7 +288,6 @@ class TestSessionManagement:
             result = get_session("nonexistent_user")
             assert result is None
 
-    @pytest.mark.skip(reason="File system mocking issues - integration test")
     def test_save_session(self, temp_dir):
         """Test saving session to file."""
         with patch('os.getcwd', return_value=str(temp_dir)):
@@ -300,14 +300,17 @@ class TestSessionManagement:
                 content = f.read()
                 assert content == "test_session_data"
 
-    @pytest.mark.skip(reason="File system mocking issues - integration test")
     def test_on_session_change(self, temp_dir):
         """Test session change handler."""
         with patch('os.getcwd', return_value=str(temp_dir)):
             mock_session = Mock()
-            mock_session.session_string = "new_session_data"
+            mock_session.export.return_value = "new_session_data"
             
-            on_session_change("test_user", Mock(), mock_session)
+            # Mock SessionEvent.CREATE
+            mock_event = Mock()
+            mock_event.__eq__ = lambda self, other: other == SessionEvent.CREATE
+            
+            on_session_change("test_user", mock_event, mock_session)
             
             session_file = temp_dir / "session_test_user.txt"
             assert session_file.exists()
@@ -347,16 +350,14 @@ class TestRemoveOutsideQuotes:
         assert remove_outside_quotes('""') == ""
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestReplyToPost:
-    @pytest.mark.skip(reason="Complex API mocking - integration test")
     def test_reply_to_post_success(self):
         """Test successful reply to post."""
         mock_client = Mock()
         mock_response = Mock()
         mock_response.uri = "at://did:plc:test/reply/1"
         mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_client.send_post.return_value = mock_response
         
         result = reply_to_post(
             mock_client,
@@ -365,9 +366,9 @@ class TestReplyToPost:
             "test_cid"
         )
         
-        assert result["uri"] == "at://did:plc:test/reply/1"
-        assert result["cid"] == "test_cid"
-        mock_client.com.atproto.repo.create_record.assert_called_once()
+        assert result.uri == "at://did:plc:test/reply/1"
+        assert result.cid == "test_cid"
+        mock_client.send_post.assert_called_once()
 
     def test_reply_to_post_with_root(self):
         """Test reply to post with root context."""
@@ -375,7 +376,7 @@ class TestReplyToPost:
         mock_response = Mock()
         mock_response.uri = "at://did:plc:test/reply/1"
         mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_client.send_post.return_value = mock_response
         
         result = reply_to_post(
             mock_client,
@@ -386,25 +387,23 @@ class TestReplyToPost:
             root_cid="root_cid"
         )
         
-        assert result["uri"] == "at://did:plc:test/reply/1"
-        assert result["cid"] == "test_cid"
+        assert result.uri == "at://did:plc:test/reply/1"
+        assert result.cid == "test_cid"
 
     def test_reply_to_post_error(self):
         """Test reply to post with error."""
         mock_client = Mock()
-        mock_client.com.atproto.repo.create_record.side_effect = Exception("API Error")
+        mock_client.send_post.side_effect = Exception("API Error")
         
-        result = reply_to_post(
-            mock_client,
-            "Test reply",
-            "at://did:plc:test/post/1",
-            "test_cid"
-        )
-        
-        assert result is None
+        with pytest.raises(Exception, match="API Error"):
+            reply_to_post(
+                mock_client,
+                "Test reply",
+                "at://did:plc:test/post/1",
+                "test_cid"
+            )
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestGetPostThread:
     def test_get_post_thread_success(self):
         """Test successful thread retrieval."""
@@ -415,24 +414,23 @@ class TestGetPostThread:
                 "replies": []
             }
         }
-        mock_client.com.atproto.feed.get_post_thread.return_value = mock_thread
+        mock_client.app.bsky.feed.get_post_thread.return_value = mock_thread
         
         result = get_post_thread(mock_client, "at://did:plc:test/post/1")
         
-        assert result == mock_thread["thread"]
-        mock_client.com.atproto.feed.get_post_thread.assert_called_once()
+        assert result == mock_thread
+        mock_client.app.bsky.feed.get_post_thread.assert_called_once()
 
     def test_get_post_thread_error(self):
         """Test thread retrieval with error."""
         mock_client = Mock()
-        mock_client.com.atproto.feed.get_post_thread.side_effect = Exception("API Error")
+        mock_client.app.bsky.feed.get_post_thread.side_effect = Exception("API Error")
         
         result = get_post_thread(mock_client, "at://did:plc:test/post/1")
         
         assert result is None
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestReplyToNotification:
     def test_reply_to_notification_success(self):
         """Test successful reply to notification."""
@@ -440,13 +438,17 @@ class TestReplyToNotification:
         mock_response = Mock()
         mock_response.uri = "at://did:plc:test/reply/1"
         mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_client.send_post.return_value = mock_response
         
+        # Create a proper mock notification with the expected structure
         mock_notification = Mock()
         mock_notification.uri = "at://did:plc:test/notification/1"
         mock_notification.cid = "notification_cid"
-        mock_notification.parent_uri = "at://did:plc:test/post/1"
-        mock_notification.parent_cid = "post_cid"
+        
+        # Mock the record structure properly
+        mock_record = Mock()
+        mock_record.reply = None  # No reply info, so this post is the root
+        mock_notification.record = mock_record
         
         result = reply_to_notification(
             mock_client,
@@ -454,13 +456,13 @@ class TestReplyToNotification:
             "Test reply"
         )
         
-        assert result["uri"] == "at://did:plc:test/reply/1"
-        assert result["cid"] == "test_cid"
+        assert result.uri == "at://did:plc:test/reply/1"
+        assert result.cid == "test_cid"
 
     def test_reply_to_notification_error(self):
         """Test reply to notification with error."""
         mock_client = Mock()
-        mock_client.com.atproto.repo.create_record.side_effect = Exception("API Error")
+        mock_client.send_post.side_effect = Exception("API Error")
         
         mock_notification = Mock()
         mock_notification.uri = "at://did:plc:test/notification/1"
@@ -475,73 +477,121 @@ class TestReplyToNotification:
         assert result is None
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestCreateSynthesisAck:
-    def test_create_synthesis_ack_success(self):
+    @patch('config_loader.get_bluesky_config')
+    def test_create_synthesis_ack_success(self, mock_get_bluesky_config):
         """Test successful synthesis acknowledgment creation."""
+        # Mock bluesky config to return proper PDS URI
+        mock_bluesky_config = {'pds_uri': 'https://bsky.social'}
+        mock_get_bluesky_config.return_value = mock_bluesky_config
+        
+        # Create a mock client with proper session structure
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.uri = "at://did:plc:test/ack/1"
-        mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_session = Mock()
+        mock_session.access_jwt = "test_access_token"
+        mock_session.did = "did:plc:test"
+        mock_client._session = mock_session
         
-        result = create_synthesis_ack(mock_client, "Test note")
-        
-        assert result["uri"] == "at://did:plc:test/ack/1"
-        assert result["cid"] == "test_cid"
-        mock_client.com.atproto.repo.create_record.assert_called_once()
+        # Mock the requests.post call
+        with patch('requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "uri": "at://did:plc:test/ack/1",
+                "cid": "test_cid"
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_post.return_value = mock_response
+            
+            result = create_synthesis_ack(mock_client, "Test note")
+            
+            assert result["uri"] == "at://did:plc:test/ack/1"
+            assert result["cid"] == "test_cid"
+            mock_post.assert_called_once()
 
     def test_create_synthesis_ack_error(self):
         """Test synthesis acknowledgment creation with error."""
         mock_client = Mock()
-        mock_client.com.atproto.repo.create_record.side_effect = Exception("API Error")
+        mock_client.send_post.side_effect = Exception("API Error")
         
         result = create_synthesis_ack(mock_client, "Test note")
         
         assert result is None
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestAcknowledgePost:
-    def test_acknowledge_post_success(self):
+    @patch('config_loader.get_bluesky_config')
+    def test_acknowledge_post_success(self, mock_get_bluesky_config):
         """Test successful post acknowledgment."""
+        # Mock bluesky config to return proper PDS URI
+        mock_bluesky_config = {'pds_uri': 'https://bsky.social'}
+        mock_get_bluesky_config.return_value = mock_bluesky_config
+        
+        # Create a mock client with proper session structure
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.uri = "at://did:plc:test/ack/1"
-        mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_session = Mock()
+        mock_session.access_jwt = "test_access_token"
+        mock_session.did = "did:plc:test"
+        mock_client._session = mock_session
         
-        result = acknowledge_post(
-            mock_client,
-            "at://did:plc:test/post/1",
-            "post_cid",
-            "Test note"
-        )
-        
-        assert result["uri"] == "at://did:plc:test/ack/1"
-        assert result["cid"] == "test_cid"
+        # Mock the requests.post call
+        with patch('requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "uri": "at://did:plc:test/ack/1",
+                "cid": "test_cid"
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_post.return_value = mock_response
+            
+            result = acknowledge_post(
+                mock_client,
+                "at://did:plc:test/post/1",
+                "post_cid",
+                "Test note"
+            )
+            
+            assert result["uri"] == "at://did:plc:test/ack/1"
+            assert result["cid"] == "test_cid"
+            mock_post.assert_called_once()
 
-    def test_acknowledge_post_no_note(self):
+    @patch('config_loader.get_bluesky_config')
+    def test_acknowledge_post_no_note(self, mock_get_bluesky_config):
         """Test post acknowledgment without note."""
+        # Mock bluesky config to return proper PDS URI
+        mock_bluesky_config = {'pds_uri': 'https://bsky.social'}
+        mock_get_bluesky_config.return_value = mock_bluesky_config
+        
+        # Create a mock client with proper session structure
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.uri = "at://did:plc:test/ack/1"
-        mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_session = Mock()
+        mock_session.access_jwt = "test_access_token"
+        mock_session.did = "did:plc:test"
+        mock_client._session = mock_session
         
-        result = acknowledge_post(
-            mock_client,
-            "at://did:plc:test/post/1",
-            "post_cid"
-        )
-        
-        assert result["uri"] == "at://did:plc:test/ack/1"
-        assert result["cid"] == "test_cid"
+        # Mock the requests.post call
+        with patch('requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "uri": "at://did:plc:test/ack/1",
+                "cid": "test_cid"
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_post.return_value = mock_response
+            
+            result = acknowledge_post(
+                mock_client,
+                "at://did:plc:test/post/1",
+                "post_cid"
+            )
+            
+            assert result["uri"] == "at://did:plc:test/ack/1"
+            assert result["cid"] == "test_cid"
+            mock_post.assert_called_once()
 
     def test_acknowledge_post_error(self):
         """Test post acknowledgment with error."""
         mock_client = Mock()
-        mock_client.com.atproto.repo.create_record.side_effect = Exception("API Error")
+        mock_client.send_post.side_effect = Exception("API Error")
         
         result = acknowledge_post(
             mock_client,
@@ -553,30 +603,46 @@ class TestAcknowledgePost:
         assert result is None
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestCreateToolCallRecord:
-    def test_create_tool_call_record_success(self):
+    @patch('config_loader.get_bluesky_config')
+    def test_create_tool_call_record_success(self, mock_get_bluesky_config):
         """Test successful tool call record creation."""
+        # Mock bluesky config to return proper PDS URI
+        mock_bluesky_config = {'pds_uri': 'https://bsky.social'}
+        mock_get_bluesky_config.return_value = mock_bluesky_config
+        
+        # Create a mock client with proper session structure
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.uri = "at://did:plc:test/tool/1"
-        mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_session = Mock()
+        mock_session.access_jwt = "test_access_token"
+        mock_session.did = "did:plc:test"
+        mock_client._session = mock_session
         
-        result = create_tool_call_record(
-            mock_client,
-            "test_tool",
-            '{"arg1": "value1"}',
-            "tool_call_123"
-        )
-        
-        assert result["uri"] == "at://did:plc:test/tool/1"
-        assert result["cid"] == "test_cid"
+        # Mock the requests.post call
+        with patch('requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "uri": "at://did:plc:test/tool/1",
+                "cid": "test_cid"
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_post.return_value = mock_response
+            
+            result = create_tool_call_record(
+                mock_client,
+                "test_tool",
+                '{"arg1": "value1"}',
+                "tool_call_123"
+            )
+            
+            assert result["uri"] == "at://did:plc:test/tool/1"
+            assert result["cid"] == "test_cid"
+            mock_post.assert_called_once()
 
     def test_create_tool_call_record_error(self):
         """Test tool call record creation with error."""
         mock_client = Mock()
-        mock_client.com.atproto.repo.create_record.side_effect = Exception("API Error")
+        mock_client.send_post.side_effect = Exception("API Error")
         
         result = create_tool_call_record(
             mock_client,
@@ -588,25 +654,41 @@ class TestCreateToolCallRecord:
         assert result is None
 
 
-@pytest.mark.skip(reason="Complex API mocking - integration tests")
 class TestCreateReasoningRecord:
-    def test_create_reasoning_record_success(self):
+    @patch('config_loader.get_bluesky_config')
+    def test_create_reasoning_record_success(self, mock_get_bluesky_config):
         """Test successful reasoning record creation."""
+        # Mock bluesky config to return proper PDS URI
+        mock_bluesky_config = {'pds_uri': 'https://bsky.social'}
+        mock_get_bluesky_config.return_value = mock_bluesky_config
+        
+        # Create a mock client with proper session structure
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.uri = "at://did:plc:test/reasoning/1"
-        mock_response.cid = "test_cid"
-        mock_client.com.atproto.repo.create_record.return_value = mock_response
+        mock_session = Mock()
+        mock_session.access_jwt = "test_access_token"
+        mock_session.did = "did:plc:test"
+        mock_client._session = mock_session
         
-        result = create_reasoning_record(mock_client, "Test reasoning text")
-        
-        assert result["uri"] == "at://did:plc:test/reasoning/1"
-        assert result["cid"] == "test_cid"
+        # Mock the requests.post call
+        with patch('requests.post') as mock_post:
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "uri": "at://did:plc:test/reasoning/1",
+                "cid": "test_cid"
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_post.return_value = mock_response
+            
+            result = create_reasoning_record(mock_client, "Test reasoning text")
+            
+            assert result["uri"] == "at://did:plc:test/reasoning/1"
+            assert result["cid"] == "test_cid"
+            mock_post.assert_called_once()
 
     def test_create_reasoning_record_error(self):
         """Test reasoning record creation with error."""
         mock_client = Mock()
-        mock_client.com.atproto.repo.create_record.side_effect = Exception("API Error")
+        mock_client.send_post.side_effect = Exception("API Error")
         
         result = create_reasoning_record(mock_client, "Test reasoning text")
         

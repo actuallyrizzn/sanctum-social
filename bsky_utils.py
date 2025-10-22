@@ -135,6 +135,8 @@ def flatten_thread_structure(thread_data):
         # If this node has a parent, traverse it first (to maintain chronological order)
         if hasattr(node, 'parent') and node.parent:
             traverse_thread(node.parent)
+        elif isinstance(node, dict) and 'parent' in node and node['parent']:
+            traverse_thread(node['parent'])
         
         # Then add this node's post
         if hasattr(node, 'post') and node.post:
@@ -147,11 +149,29 @@ def flatten_thread_structure(thread_data):
                 post_dict = {}
             
             posts.append(post_dict)
+        elif isinstance(node, dict) and 'post' in node and node['post']:
+            # Convert to dict if needed to ensure we can process it
+            if isinstance(node['post'], dict):
+                post_dict = node['post'].copy()
+            else:
+                post_dict = {}
+            
+            posts.append(post_dict)
+        
+        # Finally, traverse any replies
+        if hasattr(node, 'replies') and node.replies:
+            for reply in node.replies:
+                traverse_thread(reply)
+        elif isinstance(node, dict) and 'replies' in node and node['replies']:
+            for reply in node['replies']:
+                traverse_thread(reply)
     
     # Handle the thread structure
     if hasattr(thread_data, 'thread'):
         # Start from the main thread node
         traverse_thread(thread_data.thread)
+    elif isinstance(thread_data, dict) and 'thread' in thread_data:
+        traverse_thread(thread_data['thread'])
     elif hasattr(thread_data, '__dict__') and 'thread' in thread_data.__dict__:
         traverse_thread(thread_data.__dict__['thread'])
     
@@ -191,15 +211,19 @@ def thread_to_yaml_string(thread, strip_metadata=True):
 
 
 def get_session(username: str) -> Optional[str]:
+    import os
+    session_file = os.path.join(os.getcwd(), f"session_{username}.txt")
     try:
-        with open(f"session_{username}.txt", encoding="UTF-8") as f:
+        with open(session_file, encoding="UTF-8") as f:
             return f.read()
     except FileNotFoundError:
         logger.debug(f"No existing session found for {username}")
         return None
 
 def save_session(username: str, session_string: str) -> None:
-    with open(f"session_{username}.txt", "w", encoding="UTF-8") as f:
+    import os
+    session_file = os.path.join(os.getcwd(), f"session_{username}.txt")
+    with open(session_file, "w", encoding="UTF-8") as f:
         f.write(session_string)
     logger.debug(f"Session saved for {username}")
 
