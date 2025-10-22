@@ -109,7 +109,7 @@ bot:
     name: "void"  # or whatever you want to name your agent
 ```
 
-See [`CONFIG.md`](/CONFIG.md) for detailed configuration options and [`TOOL_MANAGEMENT.md`](/TOOL_MANAGEMENT.md) for platform-specific tool management details.
+See [`CONFIG.md`](/CONFIG.md) for detailed configuration options, [`TOOL_MANAGEMENT.md`](/TOOL_MANAGEMENT.md) for platform-specific tool management details, and [`tests/README.md`](/tests/README.md) for testing information.
 
 #### 4. Test your configuration
 
@@ -137,7 +137,7 @@ You can also:
 
 - List available tools: `python register_tools.py --list`
 - Register specific tools: `python register_tools.py --tools search_bluesky_posts create_new_bluesky_post`
-- Use a different agent name: `python register_tools.py my-agent-name`
+- Use a different agent name: `python register_tools.py --agent-id my-agent-name`
 
 **Note:** void automatically manages which tools are active based on the platform you're running (Bluesky vs X).
 

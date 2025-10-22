@@ -30,6 +30,11 @@ tests/
 └── data/                    # Test data files
 ```
 
+## Prerequisites
+
+- **Python 3.8+** - Required for running tests
+- **Virtual Environment** - Recommended for isolated testing
+
 ## Setup
 
 ### 1. Virtual Environment

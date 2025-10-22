@@ -8,7 +8,7 @@ python migrate_config.py
 ### Option 2: Start fresh with example
 1. **Copy the example configuration:**
    ```bash
-   cp config.yaml.example config.yaml
+   cp config.example.yaml config.yaml
    ```
 
 2. **Edit `config.yaml` with your credentials:**

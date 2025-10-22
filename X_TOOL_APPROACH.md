@@ -42,11 +42,13 @@ def add_post_to_x_thread(text: str) -> str:
     if len(text) > 280:
         raise Exception(f"Text exceeds 280 character limit...")
     
-    # Return confirmation - actual posting handled by x_bot.py
+    # Return confirmation - actual posting handled by x.py
     return f"X post queued for reply thread: {text[:50]}..."
 ```
 
-### Handler Implementation (Future `x_bot.py`)
+### Handler Implementation (`x.py`)
+The X bot handler is implemented in `x.py` and follows the same pattern as `bsky.py`:
+
 ```python
 # Extract successful tool calls from agent response
 reply_candidates = []
@@ -99,9 +101,9 @@ python register_x_tools.py --tools add_post_to_x_thread x_user_note_append
 python register_x_tools.py --list
 ```
 
-## Future Implementation
+## Current Implementation
 
-When creating the X bot handler (similar to `bsky.py`):
+The X bot handler in `x.py` implements:
 
 1. Parse X mentions/replies
 2. Get thread context using `x.py` 
