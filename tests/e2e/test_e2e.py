@@ -24,6 +24,8 @@ from tools.search import search_bluesky_posts
 from tools.feed import get_bluesky_feed
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestBlueskyE2EWorkflow:
     """End-to-end tests for Bluesky workflow."""
     
@@ -232,6 +234,8 @@ class TestBlueskyE2EWorkflow:
             assert "Active in tech discussions" in result
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestXE2EWorkflow:
     """End-to-end tests for X (Twitter) workflow."""
     
@@ -339,6 +343,8 @@ class TestXE2EWorkflow:
             assert "Frequent poster" in result
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestCrossPlatformE2E:
     """End-to-end tests for cross-platform functionality."""
     
@@ -434,6 +440,8 @@ class TestCrossPlatformE2E:
             assert isinstance(result, set)
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestRecoveryAndMaintenanceE2E:
     """End-to-end tests for recovery and maintenance operations."""
     

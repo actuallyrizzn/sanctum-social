@@ -44,9 +44,20 @@ def extract_handles_from_data(data):
     _extract_recursive(data)
     return list(handles)
 
-# Logging will be configured after argument parsing
-logger = None
-prompt_logger = None
+# Initialize logging early to prevent NoneType errors
+import logging
+logger = logging.getLogger("void_bot")
+logger.setLevel(logging.INFO)
+
+# Create a simple handler if none exists
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+prompt_logger = logging.getLogger("void_bot.prompts")
+prompt_logger.setLevel(logging.WARNING)
 # Simple text formatting (Rich no longer used)
 SHOW_REASONING = False
 last_archival_query = "archival memory search"
@@ -1801,15 +1812,18 @@ def main():
         logging.root.addHandler(handler)
     
     global logger, prompt_logger, console
-    logger = logging.getLogger("void_bot")
-    logger.setLevel(logging.INFO)
+    # Only reconfigure if not already initialized
+    if logger.level == logging.NOTSET:
+        logger = logging.getLogger("void_bot")
+        logger.setLevel(logging.INFO)
     
     # Create a separate logger for prompts (set to WARNING to hide by default)
-    prompt_logger = logging.getLogger("void_bot.prompts")
-    if args.reasoning:
-        prompt_logger.setLevel(logging.INFO)  # Show reasoning when --reasoning is used
-    else:
-        prompt_logger.setLevel(logging.WARNING)  # Hide by default
+    if prompt_logger.level == logging.NOTSET:
+        prompt_logger = logging.getLogger("void_bot.prompts")
+        if args.reasoning:
+            prompt_logger.setLevel(logging.INFO)  # Show reasoning when --reasoning is used
+        else:
+            prompt_logger.setLevel(logging.WARNING)  # Hide by default
     
     # Disable httpx logging completely
     logging.getLogger("httpx").setLevel(logging.CRITICAL)

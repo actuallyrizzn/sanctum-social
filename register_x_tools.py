@@ -178,10 +178,10 @@ def register_x_tools(agent_id: str = None, tools: List[str] = None):
                         agent_id=str(agent.id),
                         tool_id=str(created_tool.id)
                     )
-                    table.add_row(tool_name, "✓ Attached", tool_config["description"])
+                    table.add_row(tool_name, "+ Attached", tool_config["description"])
 
             except Exception as e:
-                table.add_row(tool_name, f"✗ Error: {str(e)}", tool_config["description"])
+                table.add_row(tool_name, f"X Error: {str(e)}", tool_config["description"])
                 logger.error(f"Error registering tool {tool_name}: {e}")
 
         console.print(table)

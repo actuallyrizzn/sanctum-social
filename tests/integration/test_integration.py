@@ -22,6 +22,8 @@ from tools.search import search_bluesky_posts
 from tools.feed import get_bluesky_feed
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestQueueManagementIntegration:
     """Test integration between queue management and notification processing."""
     
@@ -131,6 +133,8 @@ class TestQueueManagementIntegration:
                 assert final_count == 0
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestToolsIntegration:
     """Test integration between different tools."""
     
@@ -257,6 +261,8 @@ class TestToolsIntegration:
             assert "Post created successfully" in post_result
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestCrossPlatformIntegration:
     """Test integration between Bluesky and X platform tools."""
     
@@ -335,6 +341,8 @@ class TestCrossPlatformIntegration:
             mock_x_client.agents.blocks.create.assert_called()
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestErrorHandlingIntegration:
     """Test integration error handling across components."""
     

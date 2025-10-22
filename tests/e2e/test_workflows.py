@@ -11,6 +11,8 @@ from config_loader import ConfigLoader
 from notification_db import NotificationDB
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestBotWorkflow:
     """End-to-end tests for bot workflows."""
     
@@ -141,6 +143,8 @@ class TestBotWorkflow:
         assert user_data["data"]["id"] == sample_x_user["id"]
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestErrorRecoveryWorkflow:
     """Test error recovery workflows."""
     
@@ -213,6 +217,8 @@ class TestErrorRecoveryWorkflow:
             assert "error" in result.lower() or "failed" in result.lower()
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestDataPersistenceWorkflow:
     """Test data persistence workflows."""
     
@@ -292,6 +298,8 @@ class TestDataPersistenceWorkflow:
         assert loaded_notification["record"]["text"] == sample_notification["record"]["text"]
 
 
+@pytest.mark.live
+@pytest.mark.e2e
 class TestPerformanceWorkflow:
     """Test performance-related workflows."""
     
@@ -376,6 +384,8 @@ class TestPerformanceWorkflow:
 
 
 @pytest.mark.slow
+@pytest.mark.live
+@pytest.mark.e2e
 class TestLongRunningWorkflow:
     """Test long-running workflows."""
     

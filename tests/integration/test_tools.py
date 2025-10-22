@@ -12,6 +12,8 @@ from tools.post import create_new_bluesky_post
 from tools.search import search_bluesky_posts
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestToolIntegration:
     """Integration tests for tool system."""
     
@@ -126,6 +128,8 @@ class TestToolIntegration:
         assert "search" in result.lower()
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestToolErrorHandling:
     """Test error handling in tool system."""
     
@@ -173,6 +177,8 @@ class TestToolErrorHandling:
             create_new_bluesky_post(long_text)
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestToolWithMockedAPIs:
     """Test tools with mocked external APIs."""
     
@@ -229,6 +235,8 @@ class TestToolWithMockedAPIs:
         assert "error" in result.lower() or "failed" in result.lower()
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestToolConfiguration:
     """Test tool configuration and setup."""
     
@@ -264,6 +272,8 @@ class TestToolConfiguration:
             assert client is not None
 
 
+@pytest.mark.live
+@pytest.mark.integration
 class TestToolDataFlow:
     """Test data flow through tool system."""
     
