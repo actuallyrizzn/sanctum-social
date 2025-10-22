@@ -507,7 +507,7 @@ class TestRegisterTools:
             args_schema = tool_config['args_schema']
             
             # Test that args_schema is a Pydantic model
-            assert hasattr(args_schema, '__fields__') or hasattr(args_schema, 'model_fields'), \
+            assert hasattr(args_schema, 'model_fields'), \
                 f"Tool {func.__name__} args_schema is not a Pydantic model"
 
 
