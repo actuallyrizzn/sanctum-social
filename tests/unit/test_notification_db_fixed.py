@@ -299,9 +299,6 @@ class TestNotificationDB:
         assert db.conn is not None
         db.close()
         assert db.conn is None
-        
-        # Ensure proper cleanup for Windows compatibility
-        del db
 
 
 class TestNotificationDBEdgeCases:

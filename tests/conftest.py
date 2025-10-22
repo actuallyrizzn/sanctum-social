@@ -54,14 +54,33 @@ def temp_dir():
     """Create a temporary directory for test isolation."""
     temp_path = tempfile.mkdtemp()
     yield Path(temp_path)
-    # Clean up database connections before removing directory
+    # Enhanced cleanup for Windows compatibility
     import gc
+    import time
+    
+    # Force garbage collection to close any open file handles
     gc.collect()
-    try:
-        shutil.rmtree(temp_path)
-    except PermissionError:
-        # On Windows, sometimes files are still in use
-        pass
+    
+    # Retry logic for Windows file cleanup
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            shutil.rmtree(temp_path)
+            break
+        except PermissionError as e:
+            if attempt < max_retries - 1:
+                # Wait a bit and try again
+                time.sleep(0.1 * (attempt + 1))
+                gc.collect()  # Force another garbage collection
+                continue
+            else:
+                # On final attempt, just log the warning and continue
+                print(f"Warning: Could not clean up temporary directory {temp_path}: {e}")
+                break
+        except Exception as e:
+            # For other exceptions, just log and continue
+            print(f"Warning: Unexpected error cleaning up {temp_path}: {e}")
+            break
 
 
 @pytest.fixture

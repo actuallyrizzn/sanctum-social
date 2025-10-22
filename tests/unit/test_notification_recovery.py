@@ -43,7 +43,8 @@ class TestNotificationRecovery:
         mock_default_login.return_value = mock_client
         
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         mock_db.is_processed.return_value = False
         
         # Mock notification data
@@ -91,7 +92,8 @@ class TestNotificationRecovery:
         mock_default_login.return_value = mock_client
         
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         mock_db.is_processed.return_value = False
         
         # Mock notification data
@@ -133,7 +135,8 @@ class TestNotificationRecovery:
         mock_default_login.return_value = mock_client
         
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock notification data (like)
         mock_notif = Mock()
@@ -163,7 +166,8 @@ class TestNotificationRecovery:
         mock_default_login.return_value = mock_client
         
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         mock_db.is_processed.return_value = True  # Already processed
         
         # Mock notification data
@@ -199,7 +203,8 @@ class TestNotificationRecovery:
         mock_default_login.return_value = mock_client
         
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock API error
         mock_client.app.bsky.notification.list_notifications.side_effect = Exception("API Error")
@@ -215,7 +220,8 @@ class TestNotificationRecovery:
         """Test database health check."""
         # Setup mock
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock stats
         mock_stats = {
@@ -244,7 +250,8 @@ class TestNotificationRecovery:
         """Test database health check with high pending notifications."""
         # Setup mock
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock stats with high pending count
         mock_stats = {
@@ -269,7 +276,8 @@ class TestNotificationRecovery:
         """Test database health check with high error notifications."""
         # Setup mock
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock stats with high error count
         mock_stats = {
@@ -294,7 +302,8 @@ class TestNotificationRecovery:
         """Test reset_notification_status in dry run mode."""
         # Setup mock
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock database query results
         mock_cursor = Mock()
@@ -323,7 +332,8 @@ class TestNotificationRecovery:
         """Test reset_notification_status in execute mode."""
         # Setup mock
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock database query results
         mock_cursor = Mock()
@@ -358,7 +368,8 @@ class TestNotificationRecovery:
         """Test reset_notification_status when no notifications need reset."""
         # Setup mock
         mock_db = Mock()
-        mock_notification_db.return_value = mock_db
+        mock_notification_db.return_value.__enter__ = Mock(return_value=mock_db)
+        mock_notification_db.return_value.__exit__ = Mock(return_value=None)
         
         # Mock empty database query results
         mock_cursor = Mock()
