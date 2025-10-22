@@ -171,7 +171,8 @@ def get_attached_tools(agent_id: str = None, api_key: str = None) -> Set[str]:
         return set()
 
 
-if __name__ == "__main__":
+def main():
+    """Main CLI function for tool manager."""
     import argparse
     
     parser = argparse.ArgumentParser(description="Manage platform-specific tools for Void agent")
@@ -197,3 +198,7 @@ if __name__ == "__main__":
         if not args.platform:
             parser.error("platform is required when not using --list")
         ensure_platform_tools(args.platform, args.agent_id)
+
+
+if __name__ == "__main__":
+    main()

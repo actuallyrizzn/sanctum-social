@@ -354,6 +354,41 @@ class TestAttachUserBlocks:
             mock_client.blocks.create.assert_called_once()
             mock_client.agents.blocks.attach.assert_called_once()
 
+    def test_attach_user_blocks_sync_error(self):
+        """Test attachment with memory sync error."""
+        # Mock agent state
+        mock_agent_state = Mock()
+        mock_agent_state.id = "test-agent-id"
+        mock_agent_state.memory = Mock()
+        mock_agent_state.memory.blocks = Mock()
+        mock_agent_state.memory.blocks.append.side_effect = Exception("Sync error")
+        
+        # Mock client and blocks
+        mock_client = Mock()
+        mock_block = Mock()
+        mock_block.id = "block-id"
+        mock_block.label = "user_test_handle"
+        
+        with patch('tools.blocks.get_letta_client') as mock_get_client:
+            mock_get_client.return_value = mock_client
+            
+            # Mock current blocks (empty)
+            mock_client.agents.blocks.list.return_value = []
+            
+            # Mock block creation - return empty list for blocks.list, then create block
+            mock_client.blocks.list.return_value = []
+            mock_client.blocks.create.return_value = mock_block
+            
+            # Mock agent block attachment
+            mock_client.agents.blocks.attach.return_value = Mock()
+            
+            result = attach_user_blocks(['test.handle'], mock_agent_state)
+            
+            # Should still succeed despite sync error
+            assert "✓ test.handle: Block attached" in result
+            mock_client.blocks.create.assert_called_once()
+            mock_client.agents.blocks.attach.assert_called_once()
+
     def test_attach_user_blocks_already_attached(self):
         """Test attachment when blocks are already attached."""
         # Mock agent state
@@ -821,6 +856,41 @@ class TestAttachXUserBlocks:
             
             result = attach_x_user_blocks(['123456789'], mock_agent_state)
             
+            assert "✓ 123456789: Block attached" in result
+            mock_client.blocks.create.assert_called_once()
+            mock_client.agents.blocks.attach.assert_called_once()
+
+    def test_attach_x_user_blocks_sync_error(self):
+        """Test X attachment with memory sync error."""
+        # Mock agent state
+        mock_agent_state = Mock()
+        mock_agent_state.id = "test-agent-id"
+        mock_agent_state.memory = Mock()
+        mock_agent_state.memory.blocks = Mock()
+        mock_agent_state.memory.blocks.append.side_effect = Exception("Sync error")
+        
+        # Mock client and blocks
+        mock_client = Mock()
+        mock_block = Mock()
+        mock_block.id = "block-id"
+        mock_block.label = "x_user_123456789"
+        
+        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+            mock_get_client.return_value = mock_client
+            
+            # Mock current blocks (empty)
+            mock_client.agents.blocks.list.return_value = []
+            
+            # Mock block creation
+            mock_client.blocks.list.return_value = []
+            mock_client.blocks.create.return_value = mock_block
+            
+            # Mock agent block attachment
+            mock_client.agents.blocks.attach.return_value = Mock()
+            
+            result = attach_x_user_blocks(['123456789'], mock_agent_state)
+            
+            # Should still succeed despite sync error
             assert "✓ 123456789: Block attached" in result
             mock_client.blocks.create.assert_called_once()
             mock_client.agents.blocks.attach.assert_called_once()
@@ -1841,3 +1911,123 @@ class TestXUserNoteView:
                     assert "Block content" in result
                     assert "123456789" in result
                     mock_letta_class.assert_called_once_with(token='test-key')
+
+
+class TestAttachXUserBlocksCoverage:
+    """Additional tests to achieve 100% coverage for attach_x_user_blocks"""
+    
+    def test_attach_x_user_blocks_import_error_fallback(self):
+        """Test attach_x_user_blocks falls back to inline client creation on ImportError"""
+        # Mock agent state
+        mock_agent_state = Mock()
+        mock_agent_state.id = "test-agent-id"
+        
+        # Mock client
+        mock_client = Mock()
+        mock_client.agents.blocks.list.return_value = []
+        mock_client.blocks.list.return_value = []
+        
+        mock_block = Mock()
+        mock_block.id = "block-id"
+        mock_block.label = "x_user_user1"
+        mock_client.blocks.create.return_value = mock_block
+        mock_client.agents.blocks.attach.return_value = Mock()
+
+        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+            mock_get_client.side_effect = ImportError("Module not found")
+            
+            with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
+                with patch('letta_client.Letta') as mock_letta_class:
+                    mock_letta_class.return_value = mock_client
+                    
+                    result = attach_x_user_blocks(['user1'], mock_agent_state)
+                    
+                    # Verify inline client was created
+                    mock_letta_class.assert_called_once_with(token='test-key')
+                    assert "✓ user1: Block attached" in result
+
+    def test_attach_x_user_blocks_already_attached(self):
+        """Test attach_x_user_blocks skips already attached blocks"""
+        # Mock agent state
+        mock_agent_state = Mock()
+        mock_agent_state.id = "test-agent-id"
+        
+        # Mock client and existing block
+        mock_client = Mock()
+        mock_existing_block = Mock()
+        mock_existing_block.label = "x_user_user1"
+        mock_client.agents.blocks.list.return_value = [mock_existing_block]
+        
+        # Mock blocks list for user2 (not attached)
+        mock_client.blocks.list.return_value = []
+        mock_block = Mock()
+        mock_block.id = "block-id"
+        mock_block.label = "x_user_user2"
+        mock_client.blocks.create.return_value = mock_block
+        mock_client.agents.blocks.attach.return_value = Mock()
+
+        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+            mock_get_client.return_value = mock_client
+            
+            result = attach_x_user_blocks(['user1', 'user2'], mock_agent_state)
+            
+            # Should skip user1 (already attached) and process user2
+            assert "✓ user1: Already attached" in result
+            assert "✓ user2: Block attached" in result
+
+    def test_attach_x_user_blocks_existing_block_found(self):
+        """Test attach_x_user_blocks uses existing block when found"""
+        # Mock agent state
+        mock_agent_state = Mock()
+        mock_agent_state.id = "test-agent-id"
+        
+        # Mock client
+        mock_client = Mock()
+        mock_client.agents.blocks.list.return_value = []
+        
+        # Mock existing block found
+        mock_existing_block = Mock()
+        mock_existing_block.id = "existing-block-id"
+        mock_existing_block.label = "x_user_user1"
+        mock_client.blocks.list.return_value = [mock_existing_block]
+        mock_client.agents.blocks.attach.return_value = Mock()
+
+        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+            mock_get_client.return_value = mock_client
+            
+            result = attach_x_user_blocks(['user1'], mock_agent_state)
+            
+            # Should use existing block
+            assert "✓ user1: Block attached" in result
+            mock_client.blocks.create.assert_not_called()
+
+
+class TestUserNoteViewCoverage:
+    """Additional tests to achieve 100% coverage for user_note_view"""
+    
+    def test_user_note_view_import_error_fallback(self):
+        """Test user_note_view falls back to inline client creation on ImportError"""
+        # Mock agent state
+        mock_agent_state = Mock()
+        mock_agent_state.id = "test-agent-id"
+        
+        # Mock client and existing block
+        mock_client = Mock()
+        mock_existing_block = Mock()
+        mock_existing_block.id = "existing-block-id"
+        mock_existing_block.label = "user_test_handle"
+        mock_existing_block.value = "Block content"
+        mock_client.blocks.list.return_value = [mock_existing_block]
+
+        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+            mock_get_client.side_effect = ImportError("Module not found")
+            
+            with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
+                with patch('letta_client.Letta') as mock_letta_class:
+                    mock_letta_class.return_value = mock_client
+                    
+                    result = user_note_view('test.handle', mock_agent_state)
+                    
+                    # Verify inline client was created
+                    mock_letta_class.assert_called_once_with(token='test-key')
+                    assert "Block content" in result

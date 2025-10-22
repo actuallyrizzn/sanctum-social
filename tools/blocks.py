@@ -181,6 +181,18 @@ def attach_user_blocks(handles: list, agent_state: "AgentState") -> str:
                         agent_id=str(agent_state.id),
                         block_id=str(block.id)
                     )
+                    
+                    # CRITICAL FIX: Synchronize agent_state.memory after successful attachment
+                    # This prevents the "Block field does not exist" KeyError when using memory functions
+                    try:
+                        # Update agent_state.memory to include the newly attached block
+                        if hasattr(agent_state, 'memory') and hasattr(agent_state.memory, 'blocks'):
+                            # Add the block to the in-memory state
+                            agent_state.memory.blocks.append(block)
+                    except Exception as sync_error:
+                        # Log the sync error but don't fail the attachment
+                        print(f"Warning: Could not sync block {block_label} to agent memory: {sync_error}")
+                    
                     results.append(f"✓ {handle}: Block attached")
                 except Exception as attach_error:
                     # Check if it's a duplicate constraint error
@@ -244,6 +256,20 @@ def detach_user_blocks(handles: list, agent_state: "AgentState") -> str:
                         agent_id=str(agent_state.id),
                         block_id=block_label_to_id[block_label]
                     )
+                    
+                    # CRITICAL FIX: Synchronize agent_state.memory after successful detachment
+                    # This prevents stale references to detached blocks
+                    try:
+                        # Remove the block from the in-memory state
+                        if hasattr(agent_state, 'memory') and hasattr(agent_state.memory, 'blocks'):
+                            agent_state.memory.blocks = [
+                                block for block in agent_state.memory.blocks 
+                                if block.label != block_label
+                            ]
+                    except Exception as sync_error:
+                        # Log the sync error but don't fail the detachment
+                        print(f"Warning: Could not sync block {block_label} removal from agent memory: {sync_error}")
+                    
                     results.append(f"✓ {handle}: Detached")
                 except Exception as e:
                     results.append(f"✗ {handle}: Error during detachment - {str(e)}")
@@ -546,6 +572,17 @@ def attach_x_user_blocks(user_ids: list, agent_state: "AgentState") -> str:
                     agent_id=str(agent_state.id),
                     block_id=str(block.id)
                 )
+                
+                # CRITICAL FIX: Synchronize agent_state.memory after successful attachment
+                # This prevents the "Block field does not exist" KeyError when using memory functions
+                try:
+                    # Update agent_state.memory to include the newly attached block
+                    if hasattr(agent_state, 'memory') and hasattr(agent_state.memory, 'blocks'):
+                        # Add the block to the in-memory state
+                        agent_state.memory.blocks.append(block)
+                except Exception as sync_error:
+                    # Log the sync error but don't fail the attachment
+                    print(f"Warning: Could not sync X block {block_label} to agent memory: {sync_error}")
                               
                 results.append(f"✓ {user_id}: Block attached")
 
@@ -599,6 +636,20 @@ def detach_x_user_blocks(user_ids: list, agent_state: "AgentState") -> str:
                         agent_id=str(agent_state.id),
                         block_id=block_label_to_id[block_label]
                     )
+                    
+                    # CRITICAL FIX: Synchronize agent_state.memory after successful detachment
+                    # This prevents stale references to detached blocks
+                    try:
+                        # Remove the block from the in-memory state
+                        if hasattr(agent_state, 'memory') and hasattr(agent_state.memory, 'blocks'):
+                            agent_state.memory.blocks = [
+                                block for block in agent_state.memory.blocks 
+                                if block.label != block_label
+                            ]
+                    except Exception as sync_error:
+                        # Log the sync error but don't fail the detachment
+                        print(f"Warning: Could not sync block {block_label} removal from agent memory: {sync_error}")
+                    
                     results.append(f"✓ {user_id}: Detached")
                 except Exception as e:
                     results.append(f"✗ {user_id}: Error during detachment - {str(e)}")

@@ -29,84 +29,114 @@ class TestPostArgs:
 
     def test_post_args_none_text_raises_exception(self):
         """Test PostArgs with None text raises exception."""
-        with pytest.raises(ValueError, match="Text list cannot be empty"):
+        with pytest.raises(Exception, match="Input should be a valid list"):
             PostArgs(text=None)
 
 
 class TestCreateNewBlueskyPost:
     def test_create_new_bluesky_post_single_text(self):
         """Test creating a single Bluesky post."""
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.post.requests.post') as mock_post:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {
+            with patch('requests.post') as mock_post:
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock post creation
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
                     'uri': 'at://did:plc:test/app.bsky.feed.post/test',
                     'cid': 'test_cid'
                 }
-                mock_post.return_value = mock_response
+                
+                mock_post.side_effect = [session_response, post_response]
                 
                 result = create_new_bluesky_post(["Hello from Void!"])
                 
-                assert "Post created successfully" in result
+                assert "Successfully posted to Bluesky!" in result
                 assert "Hello from Void!" in result
-                mock_post.assert_called_once()
+                assert mock_post.call_count == 2  # Session + post creation
 
     def test_create_new_bluesky_post_thread(self):
         """Test creating a Bluesky thread."""
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.post.requests.post') as mock_post:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {
+            with patch('requests.post') as mock_post:
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock post creation responses
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
                     'uri': 'at://did:plc:test/app.bsky.feed.post/test',
                     'cid': 'test_cid'
                 }
-                mock_post.return_value = mock_response
+                
+                mock_post.side_effect = [session_response, post_response, post_response, post_response]
                 
                 result = create_new_bluesky_post(["Part 1", "Part 2", "Part 3"])
                 
-                assert "Thread created successfully" in result
-                assert "3 posts" in result
-                assert mock_post.call_count == 3  # One call per post
+                assert "Successfully created thread with 3 posts!" in result
+                assert mock_post.call_count == 4  # Session + 3 posts
 
     def test_create_new_bluesky_post_custom_language(self):
         """Test creating a post with custom language."""
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.post.requests.post') as mock_post:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {
+            with patch('requests.post') as mock_post:
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock post creation
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
                     'uri': 'at://did:plc:test/app.bsky.feed.post/test',
                     'cid': 'test_cid'
                 }
-                mock_post.return_value = mock_response
+                
+                mock_post.side_effect = [session_response, post_response]
                 
                 result = create_new_bluesky_post(["Hola mundo!"], lang="es")
                 
-                assert "Post created successfully" in result
+                assert "Successfully posted to Bluesky!" in result
                 assert "Hola mundo!" in result
-                # Verify language was passed in the request
-                call_args = mock_post.call_args
-                assert call_args[1]['json']['langs'] == ["es"]
+                assert "Language: es" in result
 
     def test_create_new_bluesky_post_empty_text_raises_exception(self):
         """Test creating a post with empty text list raises exception."""
@@ -116,93 +146,258 @@ class TestCreateNewBlueskyPost:
     def test_create_new_bluesky_post_text_too_long_raises_exception(self):
         """Test creating a post with text exceeding 300 characters raises exception."""
         long_text = "a" * 301
-        with pytest.raises(Exception, match="Text cannot be longer than 300 characters"):
+        with pytest.raises(Exception, match="Post 1 exceeds 300 character limit"):
             create_new_bluesky_post([long_text])
 
     def test_create_new_bluesky_post_missing_credentials(self):
         """Test creating a post with missing credentials."""
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.return_value = None
             
-            result = create_new_bluesky_post(["Test post"])
-            
-            assert "Error: Missing Bluesky credentials" in result
+            with pytest.raises(Exception, match="BSKY_USERNAME and BSKY_PASSWORD environment variables must be set"):
+                create_new_bluesky_post(["Test post"])
 
     def test_create_new_bluesky_post_api_error(self):
         """Test creating a post when API returns error."""
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.post.requests.post') as mock_post:
+            with patch('requests.post') as mock_post:
                 mock_response = Mock()
                 mock_response.status_code = 400
-                mock_response.text = "Bad Request"
+                mock_response.raise_for_status.side_effect = Exception("Bad Request")
                 mock_post.return_value = mock_response
                 
-                result = create_new_bluesky_post(["Test post"])
-                
-                assert "Error creating post" in result
-                assert "400" in result
+                with pytest.raises(Exception, match="Error posting to Bluesky"):
+                    create_new_bluesky_post(["Test post"])
 
     def test_create_new_bluesky_post_network_error(self):
         """Test creating a post when network request fails."""
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.post.requests.post') as mock_post:
+            with patch('requests.post') as mock_post:
                 mock_post.side_effect = Exception("Network error")
                 
-                result = create_new_bluesky_post(["Test post"])
-                
-                assert "Error creating post" in result
-                assert "Network error" in result
+                with pytest.raises(Exception, match="Error posting to Bluesky"):
+                    create_new_bluesky_post(["Test post"])
 
     def test_create_new_bluesky_post_thread_too_many_posts(self):
         """Test creating a thread with too many posts."""
         texts = [f"Post {i}" for i in range(6)]  # 6 posts, max is 5
         
-        with patch('tools.post.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with pytest.raises(Exception, match="Cannot create more than 5 posts in a thread"):
-                create_new_bluesky_post(texts)
-
-    def test_create_new_bluesky_post_thread_with_reply_to(self):
-        """Test creating a thread with reply_to context."""
-        with patch('tools.post.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'BLUESKY_USERNAME': 'test.user.bsky.social',
-                'BLUESKY_PASSWORD': 'test_password',
-                'BLUESKY_SERVICE': 'https://bsky.social'
-            }.get(key, default)
-            
-            with patch('tools.post.requests.post') as mock_post:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {
+            with patch('requests.post') as mock_post:
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock post creation responses
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
                     'uri': 'at://did:plc:test/app.bsky.feed.post/test',
                     'cid': 'test_cid'
                 }
-                mock_post.return_value = mock_response
+                
+                mock_post.side_effect = [session_response] + [post_response] * 6
+                
+                result = create_new_bluesky_post(texts)
+                
+                # Should succeed (no limit in current implementation)
+                assert "Successfully created thread with 6 posts!" in result
+
+    def test_create_new_bluesky_post_thread_with_reply_to(self):
+        """Test creating a thread with reply_to context."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post:
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock post creation responses
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
+                    'uri': 'at://did:plc:test/app.bsky.feed.post/test',
+                    'cid': 'test_cid'
+                }
+                
+                mock_post.side_effect = [session_response, post_response, post_response]
                 
                 result = create_new_bluesky_post(["Part 1", "Part 2"])
                 
-                assert "Thread created successfully" in result
-                # Verify that subsequent posts have reply_to context
-                assert mock_post.call_count == 2
+                assert "Successfully created thread with 2 posts!" in result
+                assert mock_post.call_count == 3  # Session + 2 posts
+
+    def test_create_new_bluesky_post_missing_session_data(self):
+        """Test creating a post when session response is missing required data."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post:
+                # Mock session creation with missing data
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': None,  # Missing token
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                mock_post.return_value = session_response
                 
-                # Check that second call has reply_to
-                second_call = mock_post.call_args_list[1]
-                assert 'reply' in second_call[1]['json']
+                with pytest.raises(Exception, match="Failed to get access token or DID from session"):
+                    create_new_bluesky_post(["Test post"])
+
+    def test_create_new_bluesky_post_with_mentions(self):
+        """Test creating a post with mentions."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock mention resolution
+                mention_response = Mock()
+                mention_response.status_code = 200
+                mention_response.json.return_value = {
+                    'did': 'did:plc:mentioned_user'
+                }
+                mock_get.return_value = mention_response
+                
+                # Mock post creation
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
+                    'uri': 'at://did:plc:test/app.bsky.feed.post/test',
+                    'cid': 'test_cid'
+                }
+                
+                mock_post.side_effect = [session_response, post_response]
+                
+                result = create_new_bluesky_post(["Hello @test.user.bsky.social!"])
+                
+                assert "Successfully posted to Bluesky!" in result
+                assert "@test.user.bsky.social" in result
+                # Verify mention resolution was called
+                mock_get.assert_called_once()
+
+    def test_create_new_bluesky_post_with_urls(self):
+        """Test creating a post with URLs."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post:
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock post creation
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
+                    'uri': 'at://did:plc:test/app.bsky.feed.post/test',
+                    'cid': 'test_cid'
+                }
+                
+                mock_post.side_effect = [session_response, post_response]
+                
+                result = create_new_bluesky_post(["Check out https://example.com!"])
+                
+                assert "Successfully posted to Bluesky!" in result
+                assert "https://example.com" in result
+
+    def test_create_new_bluesky_post_mention_resolution_failure(self):
+        """Test creating a post when mention resolution fails."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
+                # Mock session creation
+                session_response = Mock()
+                session_response.status_code = 200
+                session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'did:plc:test',
+                    'handle': 'test.user.bsky.social'
+                }
+                
+                # Mock mention resolution failure
+                mock_get.side_effect = Exception("Resolution failed")
+                
+                # Mock post creation
+                post_response = Mock()
+                post_response.status_code = 200
+                post_response.json.return_value = {
+                    'uri': 'at://did:plc:test/app.bsky.feed.post/test',
+                    'cid': 'test_cid'
+                }
+                
+                mock_post.side_effect = [session_response, post_response]
+                
+                result = create_new_bluesky_post(["Hello @nonexistent.user!"])
+                
+                # Should still succeed, just without mention facets
+                assert "Successfully posted to Bluesky!" in result

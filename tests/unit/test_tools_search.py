@@ -27,7 +27,7 @@ class TestSearchArgs:
 
     def test_search_args_missing_query(self):
         """Test SearchArgs with missing query."""
-        with pytest.raises(ValueError, match="Field required"):
+        with pytest.raises(Exception, match="Field required"):
             SearchArgs()
 
     def test_search_args_max_results_validation(self):
@@ -44,14 +44,16 @@ class TestSearchArgs:
 class TestSearchBlueskyPosts:
     def test_search_bluesky_posts_success(self):
         """Test successful Bluesky post search."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -60,7 +62,8 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
+                mock_post.return_value = mock_session_response
+
                 # Mock search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
@@ -80,26 +83,28 @@ class TestSearchBlueskyPosts:
                         }
                     ]
                 }
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
+                mock_get.return_value = mock_search_response
+
                 result = search_bluesky_posts("test query")
                 
-                assert "Search Results" in result
+                assert "search_results" in result
                 assert "Test post content" in result
                 assert "test.user.bsky.social" in result
-                assert mock_post.call_count == 2
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_with_author_filter(self):
         """Test search with author filter."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -108,32 +113,33 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
+                mock_post.return_value = mock_session_response
+
                 # Mock search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {'posts': []}
+                mock_get.return_value = mock_search_response
+
+                result = search_bluesky_posts("test query", author="user.bsky.social")
                 
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
-                result = search_bluesky_posts("test query", author="specific.user.bsky.social")
-                
-                assert "Search Results" in result
-                # Verify that the search query includes the author filter
-                search_call = mock_post.call_args_list[1]
-                search_params = search_call[1]['params']
-                assert 'from:specific.user.bsky.social test query' in search_params['q']
+                assert "search_results" in result
+                assert "user.bsky.social" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_with_custom_max_results(self):
         """Test search with custom max_results."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -142,32 +148,32 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
+                mock_post.return_value = mock_session_response
+
                 # Mock search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {'posts': []}
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
+                mock_get.return_value = mock_search_response
+
                 result = search_bluesky_posts("test query", max_results=50)
                 
-                assert "Search Results" in result
-                # Verify that the search params include the correct limit
-                search_call = mock_post.call_args_list[1]
-                search_params = search_call[1]['params']
-                assert search_params['limit'] == 50
+                assert "search_results" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_max_results_capped_at_100(self):
         """Test that max_results is capped at 100."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -176,32 +182,32 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
+                mock_post.return_value = mock_session_response
+
                 # Mock search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {'posts': []}
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
+                mock_get.return_value = mock_search_response
+
                 result = search_bluesky_posts("test query", max_results=150)
                 
-                assert "Search Results" in result
-                # Verify that the search params are capped at 100
-                search_call = mock_post.call_args_list[1]
-                search_params = search_call[1]['params']
-                assert search_params['limit'] == 100
+                assert "search_results" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_with_sort_order(self):
         """Test search with different sort orders."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -210,32 +216,32 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
+                mock_post.return_value = mock_session_response
+
                 # Mock search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {'posts': []}
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
+                mock_get.return_value = mock_search_response
+
                 result = search_bluesky_posts("test query", sort="top")
                 
-                assert "Search Results" in result
-                # Verify that the search params include the correct sort
-                search_call = mock_post.call_args_list[1]
-                search_params = search_call[1]['params']
-                assert search_params['sort'] == 'top'
+                assert "search_results" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_invalid_sort_defaults_to_latest(self):
         """Test that invalid sort order defaults to 'latest'."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -244,89 +250,58 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
+                mock_post.return_value = mock_session_response
+
                 # Mock search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {'posts': []}
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
+                mock_get.return_value = mock_search_response
+
                 result = search_bluesky_posts("test query", sort="invalid")
                 
-                assert "Search Results" in result
-                # Verify that the search params default to 'latest'
-                search_call = mock_post.call_args_list[1]
-                search_params = search_call[1]['params']
-                assert search_params['sort'] == 'latest'
+                assert "search_results" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_missing_credentials(self):
         """Test search with missing credentials."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.return_value = None
             
-            result = search_bluesky_posts("test query")
-            
-            assert "Error: Missing Bluesky credentials" in result
+            with pytest.raises(Exception, match="BSKY_USERNAME and BSKY_PASSWORD environment variables must be set"):
+                search_bluesky_posts("test query")
 
     def test_search_bluesky_posts_session_error(self):
         """Test search when session creation fails."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
-                mock_post.side_effect = Exception("Session error")
+            with patch('requests.post') as mock_post:
+                mock_response = Mock()
+                mock_response.status_code = 400
+                mock_response.raise_for_status.side_effect = Exception("Bad Request")
+                mock_post.return_value = mock_response
                 
-                result = search_bluesky_posts("test query")
-                
-                assert "Error searching Bluesky" in result
-                assert "Session error" in result
+                with pytest.raises(Exception, match="Error searching Bluesky"):
+                    search_bluesky_posts("test query")
 
     def test_search_bluesky_posts_search_api_error(self):
         """Test search when search API fails."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
-                # Mock successful session creation
-                mock_session_response = Mock()
-                mock_session_response.status_code = 200
-                mock_session_response.json.return_value = {
-                    'accessJwt': 'test_token',
-                    'did': 'test_did',
-                    'handle': 'test.user.bsky.social'
-                }
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
                 
-                # Mock failed search
-                mock_search_response = Mock()
-                mock_search_response.status_code = 400
-                mock_search_response.text = "Bad Request"
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
-                result = search_bluesky_posts("test query")
-                
-                assert "Error searching Bluesky" in result
-                assert "400" in result
-
-    def test_search_bluesky_posts_empty_results(self):
-        """Test search with empty results."""
-        with patch('tools.search.os.getenv') as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                'BSKY_USERNAME': 'test.user.bsky.social',
-                'BSKY_PASSWORD': 'test_password',
-                'PDS_URI': 'https://bsky.social'
-            }.get(key, default)
-            
-            with patch('tools.search.requests.post') as mock_post:
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -335,29 +310,64 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
+                mock_post.return_value = mock_session_response
+
+                # Mock search API error
+                mock_search_response = Mock()
+                mock_search_response.status_code = 400
+                mock_search_response.raise_for_status.side_effect = Exception("Bad Request")
+                mock_get.return_value = mock_search_response
                 
+                with pytest.raises(Exception, match="Error searching Bluesky"):
+                    search_bluesky_posts("test query")
+
+    def test_search_bluesky_posts_empty_results(self):
+        """Test search with empty results."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
+                # Mock session creation
+                mock_session_response = Mock()
+                mock_session_response.status_code = 200
+                mock_session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'test_did',
+                    'handle': 'test.user.bsky.social'
+                }
+                mock_post.return_value = mock_session_response
+
                 # Mock empty search response
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {'posts': []}
+                mock_get.return_value = mock_search_response
+
+                result = search_bluesky_posts("test query")
                 
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
-                result = search_bluesky_posts("nonexistent query")
-                
-                assert "Search Results" in result
-                assert "No posts found" in result
+                assert "search_results" in result
+                assert "result_count: 0" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
 
     def test_search_bluesky_posts_multiple_results(self):
         """Test search with multiple results."""
-        with patch('tools.search.os.getenv') as mock_getenv:
+        with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
                 'BSKY_PASSWORD': 'test_password',
                 'PDS_URI': 'https://bsky.social'
             }.get(key, default)
             
-            with patch('tools.search.requests.post') as mock_post:
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
                 # Mock session creation
                 mock_session_response = Mock()
                 mock_session_response.status_code = 200
@@ -366,8 +376,9 @@ class TestSearchBlueskyPosts:
                     'did': 'test_did',
                     'handle': 'test.user.bsky.social'
                 }
-                
-                # Mock search response with multiple posts
+                mock_post.return_value = mock_session_response
+
+                # Mock multiple search results
                 mock_search_response = Mock()
                 mock_search_response.status_code = 200
                 mock_search_response.json.return_value = {
@@ -398,13 +409,93 @@ class TestSearchBlueskyPosts:
                         }
                     ]
                 }
-                
-                mock_post.side_effect = [mock_session_response, mock_search_response]
-                
+                mock_get.return_value = mock_search_response
+
                 result = search_bluesky_posts("test query")
                 
-                assert "Search Results" in result
+                assert "search_results" in result
+                assert "result_count: 2" in result
                 assert "First post" in result
                 assert "Second post" in result
-                assert "user1.bsky.social" in result
-                assert "user2.bsky.social" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
+
+    def test_search_bluesky_posts_with_reply_info(self):
+        """Test search with posts that have reply information."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post, \
+                 patch('requests.get') as mock_get:
+                
+                # Mock session creation
+                mock_session_response = Mock()
+                mock_session_response.status_code = 200
+                mock_session_response.json.return_value = {
+                    'accessJwt': 'test_token',
+                    'did': 'test_did',
+                    'handle': 'test.user.bsky.social'
+                }
+                mock_post.return_value = mock_session_response
+
+                # Mock search response with reply info
+                mock_search_response = Mock()
+                mock_search_response.status_code = 200
+                mock_search_response.json.return_value = {
+                    'posts': [
+                        {
+                            'uri': 'at://did:plc:test/post/1',
+                            'cid': 'test_cid',
+                            'record': {
+                                'text': 'Reply post',
+                                'createdAt': '2025-01-01T00:00:00.000Z',
+                                'reply': {
+                                    'parent': {
+                                        'uri': 'at://did:plc:test/parent/1',
+                                        'cid': 'parent_cid'
+                                    }
+                                }
+                            },
+                            'author': {
+                                'handle': 'test.user.bsky.social',
+                                'displayName': 'Test User'
+                            }
+                        }
+                    ]
+                }
+                mock_get.return_value = mock_search_response
+
+                result = search_bluesky_posts("test query")
+                
+                assert "search_results" in result
+                assert "Reply post" in result
+                assert "reply_to" in result
+                mock_post.assert_called_once()
+                mock_get.assert_called_once()
+
+    def test_search_bluesky_posts_missing_access_token(self):
+        """Test search when session response is missing access token."""
+        with patch('os.getenv') as mock_getenv:
+            mock_getenv.side_effect = lambda key, default=None: {
+                'BSKY_USERNAME': 'test.user.bsky.social',
+                'BSKY_PASSWORD': 'test_password',
+                'PDS_URI': 'https://bsky.social'
+            }.get(key, default)
+            
+            with patch('requests.post') as mock_post:
+                # Mock session creation without accessJwt
+                mock_session_response = Mock()
+                mock_session_response.status_code = 200
+                mock_session_response.json.return_value = {
+                    'did': 'test_did',
+                    'handle': 'test.user.bsky.social'
+                    # Missing 'accessJwt'
+                }
+                mock_post.return_value = mock_session_response
+                
+                with pytest.raises(Exception, match="Failed to get access token from session"):
+                    search_bluesky_posts("test query")

@@ -715,3 +715,175 @@ class TestQueueManager:
         
         # Verify output contains help message
         assert 'Manage Void bot notification queue' in output
+
+    def test_cli_main_function_list_with_handle(self):
+        """Test CLI main function with list command and handle filter."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.list_notifications') as mock_list_notifications:
+            with patch('sys.argv', ['queue_manager.py', 'list', '--handle', 'test.user']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_list_notifications.assert_called_once_with('test.user', False)
+
+    def test_cli_main_function_list_with_all(self):
+        """Test CLI main function with list command and --all flag."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.list_notifications') as mock_list_notifications:
+            with patch('sys.argv', ['queue_manager.py', 'list', '--all']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_list_notifications.assert_called_once_with(None, True)
+
+    def test_cli_main_function_delete_with_dry_run(self):
+        """Test CLI main function with delete command and dry-run."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.delete_by_handle') as mock_delete:
+            with patch('sys.argv', ['queue_manager.py', 'delete', 'test.user', '--dry-run']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_delete.assert_called_once_with('test.user', True, False)
+
+    def test_cli_main_function_delete_with_force(self):
+        """Test CLI main function with delete command and force."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.delete_by_handle') as mock_delete:
+            with patch('sys.argv', ['queue_manager.py', 'delete', 'test.user', '--force']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_delete.assert_called_once_with('test.user', False, True)
+
+    def test_cli_main_function_stats(self):
+        """Test CLI main function with stats command."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.stats') as mock_stats:
+            with patch('sys.argv', ['queue_manager.py', 'stats']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_stats.assert_called_once()
+
+    def test_cli_main_function_count(self):
+        """Test CLI main function with count command."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.count_by_handle') as mock_count:
+            with patch('sys.argv', ['queue_manager.py', 'count']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_count.assert_called_once()
+
+    def test_cli_main_function_no_command(self):
+        """Test CLI main function with no command (should print help)."""
+        import queue_manager
+        from unittest.mock import patch
+        
+        with patch('queue_manager.argparse.ArgumentParser.print_help') as mock_help:
+            with patch('sys.argv', ['queue_manager.py']):
+                try:
+                    queue_manager.main()
+                except SystemExit:
+                    pass
+            
+            mock_help.assert_called_once()
+
+    def test_list_notifications_unknown_directory(self):
+        """Test list_notifications with unknown directory source."""
+        import queue_manager
+        from unittest.mock import patch, Mock
+        from pathlib import Path
+        
+        # Create a mock directory that doesn't match any known directories
+        mock_dir = Mock(spec=Path)
+        mock_dir.exists.return_value = True
+        mock_dir.glob.return_value = []
+        
+        # Mock the directory constants to return different values
+        with patch('queue_manager.QUEUE_DIR', Path('/queue')), \
+             patch('queue_manager.QUEUE_ERROR_DIR', Path('/errors')), \
+             patch('queue_manager.QUEUE_NO_REPLY_DIR', Path('/no_reply')):
+            
+            # Create a directory that doesn't match any of the known ones
+            unknown_dir = Mock(spec=Path)
+            unknown_dir.exists.return_value = True
+            unknown_dir.glob.return_value = []
+            
+            with patch('queue_manager.Path') as mock_path:
+                mock_path.return_value = unknown_dir
+                
+                result = queue_manager.list_notifications()
+                
+                # Should return None when no notifications found
+                assert result is None
+
+    def test_count_by_handle_nonexistent_directory(self):
+        """Test count_by_handle with nonexistent directories."""
+        import queue_manager
+        from unittest.mock import patch, Mock
+        from pathlib import Path
+        
+        # Mock directories that don't exist
+        mock_dir = Mock(spec=Path)
+        mock_dir.exists.return_value = False
+        
+        with patch('queue_manager.QUEUE_DIR', mock_dir), \
+             patch('queue_manager.QUEUE_ERROR_DIR', mock_dir), \
+             patch('queue_manager.QUEUE_NO_REPLY_DIR', mock_dir):
+            
+            result = queue_manager.count_by_handle()
+            
+            # Should return None when no directories exist
+            assert result is None
+
+    def test_count_by_handle_subdirectory_skip(self):
+        """Test count_by_handle skipping subdirectories."""
+        import queue_manager
+        from unittest.mock import patch, Mock
+        from pathlib import Path
+        
+        # Create a mock directory with a subdirectory
+        mock_dir = Mock(spec=Path)
+        mock_dir.exists.return_value = True
+        
+        # Create a mock filepath that is a directory
+        mock_filepath = Mock(spec=Path)
+        mock_filepath.is_dir.return_value = True
+        mock_filepath.name = "subdir"
+        
+        mock_dir.glob.return_value = [mock_filepath]
+        
+        with patch('queue_manager.QUEUE_DIR', mock_dir), \
+             patch('queue_manager.QUEUE_ERROR_DIR', mock_dir), \
+             patch('queue_manager.QUEUE_NO_REPLY_DIR', mock_dir):
+            
+            result = queue_manager.count_by_handle()
+            
+            # Should return None when only subdirectories are found
+            assert result is None

@@ -721,3 +721,40 @@ class TestRegisterToolsCLI:
         # Verify output contains agent ID
         assert 'test-agent-id' in output
         assert 'Registering tools for agent:' in output
+
+    def test_cli_main_function_list(self):
+        """Test CLI main function with --list argument."""
+        import register_tools
+        from unittest.mock import patch
+        
+        with patch('register_tools.list_available_tools') as mock_list_tools:
+            with patch('sys.argv', ['register_tools.py', '--list']):
+                register_tools.main()
+            
+            mock_list_tools.assert_called_once()
+
+    def test_cli_main_function_register(self):
+        """Test CLI main function with registration."""
+        import register_tools
+        from unittest.mock import patch
+        
+        with patch('register_tools.register_tools') as mock_register_tools, \
+             patch('register_tools.letta_config', {'agent_id': 'test-agent-id'}):
+            
+            with patch('sys.argv', ['register_tools.py', '--agent-id', 'test-agent', '--tools', 'halt_activity']):
+                register_tools.main()
+            
+            mock_register_tools.assert_called_once_with('test-agent', ['halt_activity'])
+
+    def test_cli_main_function_register_default_agent(self):
+        """Test CLI main function with default agent from config."""
+        import register_tools
+        from unittest.mock import patch
+        
+        with patch('register_tools.register_tools') as mock_register_tools, \
+             patch('register_tools.letta_config', {'agent_id': 'default-agent'}):
+            
+            with patch('sys.argv', ['register_tools.py', '--tools', 'halt_activity']):
+                register_tools.main()
+            
+            mock_register_tools.assert_called_once_with('default-agent', ['halt_activity'])

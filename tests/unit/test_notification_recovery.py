@@ -589,3 +589,59 @@ class TestNotificationRecovery:
         
         # Verify output contains help message
         assert 'Notification recovery and management tools' in output
+
+    def test_cli_main_function_recover_with_execute(self):
+        """Test CLI main function with recover command and execute flag."""
+        import notification_recovery
+        from unittest.mock import patch
+        
+        with patch('notification_recovery.recover_notifications') as mock_recover:
+            with patch('sys.argv', ['notification_recovery.py', 'recover', '--hours', '12', '--execute']):
+                try:
+                    notification_recovery.main()
+                except SystemExit:
+                    pass
+            
+            mock_recover.assert_called_once_with(hours=12, dry_run=False)
+
+    def test_cli_main_function_health(self):
+        """Test CLI main function with health command."""
+        import notification_recovery
+        from unittest.mock import patch
+        
+        with patch('notification_recovery.check_database_health') as mock_health:
+            with patch('sys.argv', ['notification_recovery.py', 'health']):
+                try:
+                    notification_recovery.main()
+                except SystemExit:
+                    pass
+            
+            mock_health.assert_called_once()
+
+    def test_cli_main_function_reset_with_execute(self):
+        """Test CLI main function with reset command and execute flag."""
+        import notification_recovery
+        from unittest.mock import patch
+        
+        with patch('notification_recovery.reset_notification_status') as mock_reset:
+            with patch('sys.argv', ['notification_recovery.py', 'reset', '--hours', '2', '--execute']):
+                try:
+                    notification_recovery.main()
+                except SystemExit:
+                    pass
+            
+            mock_reset.assert_called_once_with(hours=2, dry_run=False)
+
+    def test_cli_main_function_no_command(self):
+        """Test CLI main function with no command (should print help)."""
+        import notification_recovery
+        from unittest.mock import patch
+        
+        with patch('notification_recovery.argparse.ArgumentParser.print_help') as mock_help:
+            with patch('sys.argv', ['notification_recovery.py']):
+                try:
+                    notification_recovery.main()
+                except SystemExit:
+                    pass
+            
+            mock_help.assert_called_once()

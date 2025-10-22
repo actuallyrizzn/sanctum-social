@@ -217,7 +217,8 @@ def list_available_tools():
     console.print(table)
 
 
-if __name__ == "__main__":
+def main():
+    """Main CLI function for register tools."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Register Void tools with a Letta agent")
@@ -234,3 +235,7 @@ if __name__ == "__main__":
         agent_id = args.agent_id if args.agent_id else letta_config['agent_id']
         console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
         register_tools(agent_id, args.tools)
+
+
+if __name__ == "__main__":
+    main()
