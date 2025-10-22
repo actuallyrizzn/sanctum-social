@@ -15,7 +15,10 @@ from queue_manager import (
     stats,
     QUEUE_DIR,
     QUEUE_ERROR_DIR,
-    QUEUE_NO_REPLY_DIR
+    QUEUE_NO_REPLY_DIR,
+    QueueError,
+    TransientQueueError,
+    PermanentQueueError
 )
 
 
@@ -44,9 +47,8 @@ class TestQueueManager:
         """Test loading notification from non-existent file."""
         non_existent_file = tmp_path / "non_existent.json"
         
-        result = load_notification(non_existent_file)
-        
-        assert result is None
+        with pytest.raises(QueueError):
+            load_notification(non_existent_file)
     
     def test_load_notification_invalid_json(self, tmp_path):
         """Test loading notification with invalid JSON."""
@@ -54,9 +56,8 @@ class TestQueueManager:
         with open(invalid_json_file, 'w') as f:
             f.write("invalid json content")
         
-        result = load_notification(invalid_json_file)
-        
-        assert result is None
+        with pytest.raises(PermanentQueueError):
+            load_notification(invalid_json_file)
     
     @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
     @patch('queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
@@ -350,9 +351,8 @@ class TestQueueManager:
         
         # Mock open to raise permission error
         with patch('builtins.open', side_effect=PermissionError("Permission denied")):
-            result = load_notification(notification_file)
-            
-            assert result is None
+            with pytest.raises(TransientQueueError):
+                load_notification(notification_file)
     
     @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
     def test_list_notifications_with_invalid_json_files(self, tmp_path):
