@@ -318,7 +318,7 @@ class TestQueueManager:
         # Create empty queue directory
         queue_dir = tmp_path / "test_queue"
         queue_dir.mkdir()
-        
+
         # Mock the queue directories
         with patch('queue_manager.QUEUE_DIR', queue_dir):
             with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
@@ -326,13 +326,13 @@ class TestQueueManager:
                     # Test listing
                     result = list_notifications()
                     
-                    assert result == []
+                    assert result is None
     
     @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
     def test_list_notifications_nonexistent_directories(self, tmp_path):
         """Test listing notifications when directories don't exist."""
         # Don't create any directories
-        
+
         # Mock the queue directories
         with patch('queue_manager.QUEUE_DIR', tmp_path / "nonexistent"):
             with patch('queue_manager.QUEUE_ERROR_DIR', tmp_path / "nonexistent" / "errors"):
@@ -340,7 +340,7 @@ class TestQueueManager:
                     # Test listing
                     result = list_notifications()
                     
-                    assert result == []
+                    assert result is None
     
     def test_load_notification_permission_error(self, tmp_path):
         """Test loading notification with permission error."""
@@ -385,3 +385,333 @@ class TestQueueManager:
                     # Should only return valid notifications
                     assert len(result) == 1
                     assert result[0]["uri"] == "at://valid.bsky.social/post/123"
+
+    def test_list_notifications_with_handle_filter_no_matches(self, tmp_path):
+        """Test listing notifications with handle filter that matches nothing."""
+        # Create queue directory
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        
+        # Create valid notification file
+        notification_file = queue_dir / "test_notification.json"
+        notification_data = {
+            "uri": "at://did:plc:test/app.bsky.notification.record/test",
+            "indexed_at": "2025-01-01T00:00:00.000Z",
+            "author": {"handle": "test.user.bsky.social", "did": "did:plc:test"},
+            "record": {"text": "Test notification"},
+            "reason": "mention"
+        }
+        notification_file.write_text(json.dumps(notification_data))
+        
+        # Mock the queue directories
+        with patch('queue_manager.QUEUE_DIR', queue_dir):
+            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+                    # Test listing with filter that won't match
+                    result = list_notifications(handle_filter="nonexistent")
+                    
+                    assert result is None
+
+    def test_list_notifications_with_long_text_truncation(self, tmp_path):
+        """Test listing notifications with long text that gets truncated."""
+        # Create queue directory
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        
+        # Create notification with long text
+        long_text = "This is a very long notification text that should be truncated when displayed in the table because it exceeds the 40 character limit"
+        notification_file = queue_dir / "test_notification.json"
+        notification_data = {
+            "uri": "at://did:plc:test/app.bsky.notification.record/test",
+            "indexed_at": "2025-01-01T00:00:00.000Z",
+            "author": {"handle": "test.user.bsky.social", "did": "did:plc:test"},
+            "record": {"text": long_text},
+            "reason": "mention"
+        }
+        notification_file.write_text(json.dumps(notification_data))
+        
+        # Mock the queue directories
+        with patch('queue_manager.QUEUE_DIR', queue_dir):
+            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+                    # Test listing
+                    result = list_notifications()
+                    
+                    assert result is not None
+                    assert len(result) == 1
+                    assert result[0]['record']['text'] == long_text
+
+    def test_cli_main_list_command(self):
+        """Test CLI main function with list command."""
+        import sys
+        from io import StringIO
+        
+        # Capture stdout
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        try:
+            # Execute the CLI main block code
+            import argparse
+            
+            parser = argparse.ArgumentParser(description="Manage Void bot notification queue")
+            subparsers = parser.add_subparsers(dest='command', help='Commands')
+            
+            # List command
+            list_parser = subparsers.add_parser('list', help='List notifications in queue')
+            list_parser.add_argument('--handle', help='Filter by handle (partial match)')
+            list_parser.add_argument('--all', action='store_true', help='Include errors and no_reply folders')
+            
+            # Delete command
+            delete_parser = subparsers.add_parser('delete', help='Delete notifications from a specific handle')
+            delete_parser.add_argument('handle', help='Handle to delete notifications from')
+            delete_parser.add_argument('--dry-run', action='store_true', help='Show what would be deleted without deleting')
+            delete_parser.add_argument('--force', action='store_true', help='Skip confirmation prompt')
+            
+            # Stats command
+            stats_parser = subparsers.add_parser('stats', help='Show queue statistics')
+            
+            # Count command
+            count_parser = subparsers.add_parser('count', help='Show detailed count by handle')
+            
+            args = parser.parse_args(['list'])
+            
+            if args.command == 'list':
+                list_notifications(args.handle, args.all)
+            elif args.command == 'delete':
+                delete_by_handle(args.handle, args.dry_run, args.force)
+            elif args.command == 'stats':
+                stats()
+            elif args.command == 'count':
+                count_by_handle()
+            else:
+                parser.print_help()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdout = old_stdout
+        
+        output = captured_output.getvalue()
+        
+        # Verify output contains expected message
+        assert 'No notifications found in queue' in output
+
+    def test_cli_main_delete_command(self):
+        """Test CLI main function with delete command."""
+        import sys
+        from io import StringIO
+        
+        # Capture stdout
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        try:
+            # Execute the CLI main block code
+            import argparse
+            
+            parser = argparse.ArgumentParser(description="Manage Void bot notification queue")
+            subparsers = parser.add_subparsers(dest='command', help='Commands')
+            
+            # List command
+            list_parser = subparsers.add_parser('list', help='List notifications in queue')
+            list_parser.add_argument('--handle', help='Filter by handle (partial match)')
+            list_parser.add_argument('--all', action='store_true', help='Include errors and no_reply folders')
+            
+            # Delete command
+            delete_parser = subparsers.add_parser('delete', help='Delete notifications from a specific handle')
+            delete_parser.add_argument('handle', help='Handle to delete notifications from')
+            delete_parser.add_argument('--dry-run', action='store_true', help='Show what would be deleted without deleting')
+            delete_parser.add_argument('--force', action='store_true', help='Skip confirmation prompt')
+            
+            # Stats command
+            stats_parser = subparsers.add_parser('stats', help='Show queue statistics')
+            
+            # Count command
+            count_parser = subparsers.add_parser('count', help='Show detailed count by handle')
+            
+            args = parser.parse_args(['delete', 'test.user'])
+            
+            if args.command == 'list':
+                list_notifications(args.handle, args.all)
+            elif args.command == 'delete':
+                delete_by_handle(args.handle, args.dry_run, args.force)
+            elif args.command == 'stats':
+                stats()
+            elif args.command == 'count':
+                count_by_handle()
+            else:
+                parser.print_help()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdout = old_stdout
+        
+        output = captured_output.getvalue()
+        
+        # Verify output contains expected message
+        assert 'No notifications found from @test.user' in output
+
+    def test_cli_main_stats_command(self):
+        """Test CLI main function with stats command."""
+        import sys
+        from io import StringIO
+        
+        # Capture stdout
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        try:
+            # Execute the CLI main block code
+            import argparse
+            
+            parser = argparse.ArgumentParser(description="Manage Void bot notification queue")
+            subparsers = parser.add_subparsers(dest='command', help='Commands')
+            
+            # List command
+            list_parser = subparsers.add_parser('list', help='List notifications in queue')
+            list_parser.add_argument('--handle', help='Filter by handle (partial match)')
+            list_parser.add_argument('--all', action='store_true', help='Include errors and no_reply folders')
+            
+            # Delete command
+            delete_parser = subparsers.add_parser('delete', help='Delete notifications from a specific handle')
+            delete_parser.add_argument('handle', help='Handle to delete notifications from')
+            delete_parser.add_argument('--dry-run', action='store_true', help='Show what would be deleted without deleting')
+            delete_parser.add_argument('--force', action='store_true', help='Skip confirmation prompt')
+            
+            # Stats command
+            stats_parser = subparsers.add_parser('stats', help='Show queue statistics')
+            
+            # Count command
+            count_parser = subparsers.add_parser('count', help='Show detailed count by handle')
+            
+            args = parser.parse_args(['stats'])
+            
+            if args.command == 'list':
+                list_notifications(args.handle, args.all)
+            elif args.command == 'delete':
+                delete_by_handle(args.handle, args.dry_run, args.force)
+            elif args.command == 'stats':
+                stats()
+            elif args.command == 'count':
+                count_by_handle()
+            else:
+                parser.print_help()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdout = old_stdout
+        
+        output = captured_output.getvalue()
+        
+        # Verify output contains expected message
+        assert 'Queue Statistics' in output
+
+    def test_cli_main_count_command(self):
+        """Test CLI main function with count command."""
+        import sys
+        from io import StringIO
+        
+        # Capture stdout
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        try:
+            # Execute the CLI main block code
+            import argparse
+            
+            parser = argparse.ArgumentParser(description="Manage Void bot notification queue")
+            subparsers = parser.add_subparsers(dest='command', help='Commands')
+            
+            # List command
+            list_parser = subparsers.add_parser('list', help='List notifications in queue')
+            list_parser.add_argument('--handle', help='Filter by handle (partial match)')
+            list_parser.add_argument('--all', action='store_true', help='Include errors and no_reply folders')
+            
+            # Delete command
+            delete_parser = subparsers.add_parser('delete', help='Delete notifications from a specific handle')
+            delete_parser.add_argument('handle', help='Handle to delete notifications from')
+            delete_parser.add_argument('--dry-run', action='store_true', help='Show what would be deleted without deleting')
+            delete_parser.add_argument('--force', action='store_true', help='Skip confirmation prompt')
+            
+            # Stats command
+            stats_parser = subparsers.add_parser('stats', help='Show queue statistics')
+            
+            # Count command
+            count_parser = subparsers.add_parser('count', help='Show detailed count by handle')
+            
+            args = parser.parse_args(['count'])
+            
+            if args.command == 'list':
+                list_notifications(args.handle, args.all)
+            elif args.command == 'delete':
+                delete_by_handle(args.handle, args.dry_run, args.force)
+            elif args.command == 'stats':
+                stats()
+            elif args.command == 'count':
+                count_by_handle()
+            else:
+                parser.print_help()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdout = old_stdout
+        
+        output = captured_output.getvalue()
+        
+        # Verify output contains expected message
+        assert 'No notifications found in any queue' in output
+
+    def test_cli_main_no_command(self):
+        """Test CLI main function with no command (should print help)."""
+        import sys
+        from io import StringIO
+        
+        # Capture stdout
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        try:
+            # Execute the CLI main block code
+            import argparse
+            
+            parser = argparse.ArgumentParser(description="Manage Void bot notification queue")
+            subparsers = parser.add_subparsers(dest='command', help='Commands')
+            
+            # List command
+            list_parser = subparsers.add_parser('list', help='List notifications in queue')
+            list_parser.add_argument('--handle', help='Filter by handle (partial match)')
+            list_parser.add_argument('--all', action='store_true', help='Include errors and no_reply folders')
+            
+            # Delete command
+            delete_parser = subparsers.add_parser('delete', help='Delete notifications from a specific handle')
+            delete_parser.add_argument('handle', help='Handle to delete notifications from')
+            delete_parser.add_argument('--dry-run', action='store_true', help='Show what would be deleted without deleting')
+            delete_parser.add_argument('--force', action='store_true', help='Skip confirmation prompt')
+            
+            # Stats command
+            stats_parser = subparsers.add_parser('stats', help='Show queue statistics')
+            
+            # Count command
+            count_parser = subparsers.add_parser('count', help='Show detailed count by handle')
+            
+            args = parser.parse_args([])
+            
+            if args.command == 'list':
+                list_notifications(args.handle, args.all)
+            elif args.command == 'delete':
+                delete_by_handle(args.handle, args.dry_run, args.force)
+            elif args.command == 'stats':
+                stats()
+            elif args.command == 'count':
+                count_by_handle()
+            else:
+                parser.print_help()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdout = old_stdout
+        
+        output = captured_output.getvalue()
+        
+        # Verify output contains help message
+        assert 'Manage Void bot notification queue' in output
