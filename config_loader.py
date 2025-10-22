@@ -28,10 +28,20 @@ class ConfigLoader:
     def _load_config(self) -> None:
         """Load configuration from YAML file."""
         if not self.config_path.exists():
-            raise FileNotFoundError(
-                f"Configuration file not found: {self.config_path}\n"
-                f"Please copy config.yaml.example to config.yaml and configure it."
-            )
+            # Check if example config exists
+            example_path = Path("config.example.yaml")
+            if example_path.exists():
+                raise FileNotFoundError(
+                    f"Configuration file not found: {self.config_path}\n"
+                    f"Please copy config.example.yaml to config.yaml and configure it:\n"
+                    f"  cp config.example.yaml config.yaml\n"
+                    f"Then edit config.yaml with your credentials."
+                )
+            else:
+                raise FileNotFoundError(
+                    f"Configuration file not found: {self.config_path}\n"
+                    f"No example configuration file found. Please create config.yaml with your credentials."
+                )
         
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:

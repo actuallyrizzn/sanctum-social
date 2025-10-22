@@ -74,18 +74,7 @@ def log_with_panel(message, title=None, border_color="white"):
         print(message)
 
 
-# Load Letta configuration from config.yaml
-letta_config = get_letta_config()
-
-# Create a client with configuration from config.yaml
-CLIENT_PARAMS = {
-    'token': letta_config['api_key'],
-    'timeout': letta_config['timeout']
-}
-if letta_config.get('base_url'):
-    CLIENT_PARAMS['base_url'] = letta_config['base_url']
-
-CLIENT = Letta(**CLIENT_PARAMS)
+# Configuration will be loaded when needed in functions
 
 # Notification check delay
 FETCH_NOTIFICATIONS_DELAY_SEC = 10  # Check every 10 seconds for faster response
@@ -168,12 +157,24 @@ def export_agent_state(client, agent, skip_git=False):
 def initialize_void():
     logger.info("Starting void agent initialization...")
 
+    # Load configuration when needed
+    letta_config = get_letta_config()
+    
+    # Create client with configuration
+    client_params = {
+        'token': letta_config['api_key'],
+        'timeout': letta_config['timeout']
+    }
+    if letta_config.get('base_url'):
+        client_params['base_url'] = letta_config['base_url']
+    client = Letta(**client_params)
+
     # Get the configured void agent by ID
     logger.info("Loading void agent from config...")
     agent_id = letta_config['agent_id']
     
     try:
-        void_agent = CLIENT.agents.retrieve(agent_id=agent_id)
+        void_agent = client.agents.retrieve(agent_id=agent_id)
         logger.info(f"Successfully loaded void agent: {void_agent.name} ({agent_id})")
     except Exception as e:
         logger.error(f"Failed to load void agent {agent_id}: {e}")
@@ -182,7 +183,7 @@ def initialize_void():
     
     # Export agent state
     logger.info("Exporting agent state...")
-    export_agent_state(CLIENT, void_agent, skip_git=SKIP_GIT)
+    export_agent_state(client, void_agent, skip_git=SKIP_GIT)
     
     # Log agent details
     logger.info(f"Void agent details - ID: {void_agent.id}")
@@ -401,8 +402,18 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
         logger.debug(f"Sending to LLM: @{author_handle} mention | msg: \"{mention_text[:50]}...\" | context: {len(thread_context)} chars, {thread_handles_count} users | prompt: {prompt_char_count} chars")
 
         try:
+            # Load configuration and create client when needed
+            letta_config = get_letta_config()
+            client_params = {
+                'token': letta_config['api_key'],
+                'timeout': letta_config['timeout']
+            }
+            if letta_config.get('base_url'):
+                client_params['base_url'] = letta_config['base_url']
+            client = Letta(**client_params)
+            
             # Use streaming to avoid 524 timeout errors
-            message_stream = CLIENT.agents.messages.create_stream(
+            message_stream = client.agents.messages.create_stream(
                 agent_id=void_agent.id,
                 messages=[{"role": "user", "content": prompt}],
                 stream_tokens=False,  # Step streaming only (faster than token streaming)
@@ -1127,7 +1138,18 @@ def load_and_process_queued_notifications(void_agent, atproto_client, testing_mo
                     follow_update = f"@{author_handle} ({author_display_name}) started following you."
                     follow_message = f"Update: {follow_update}"
                     logger.info(f"Notifying agent about new follower: @{author_handle} | prompt: {len(follow_message)} chars")
-                    CLIENT.agents.messages.create(
+                    
+                    # Load configuration and create client when needed
+                    letta_config = get_letta_config()
+                    client_params = {
+                        'token': letta_config['api_key'],
+                        'timeout': letta_config['timeout']
+                    }
+                    if letta_config.get('base_url'):
+                        client_params['base_url'] = letta_config['base_url']
+                    client = Letta(**client_params)
+                    
+                    client.agents.messages.create(
                         agent_id = void_agent.id,
                         messages = [{"role":"user", "content": follow_message}]
                     )

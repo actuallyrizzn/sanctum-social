@@ -21,7 +21,6 @@ from tools.whitewind import create_whitewind_blog_post, WhitewindPostArgs
 from tools.ack import annotate_ack, AnnotateAckArgs
 from tools.webpage import fetch_webpage, WebpageArgs
 
-letta_config = get_letta_config()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 console = Console()
@@ -125,6 +124,9 @@ def register_tools(agent_id: str = None, tools: List[str] = None):
         agent_id: ID of the agent to attach tools to. If None, uses config default.
         tools: List of tool names to register. If None, registers all tools.
     """
+    # Load configuration when needed
+    letta_config = get_letta_config()
+    
     # Use agent ID from config if not provided
     if agent_id is None:
         agent_id = letta_config['agent_id']
@@ -231,6 +233,8 @@ def main():
     if args.list:
         list_available_tools()
     else:
+        # Load configuration when needed
+        letta_config = get_letta_config()
         # Use config default if no agent specified
         agent_id = args.agent_id if args.agent_id else letta_config['agent_id']
         console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")

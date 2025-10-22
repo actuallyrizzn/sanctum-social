@@ -12,3 +12,4 @@ x_queue/
 !x_queue/last_seen_id.json
 !x_queue/processed_mentions.json
 
+.coverage
