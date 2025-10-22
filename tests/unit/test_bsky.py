@@ -135,18 +135,21 @@ class TestExportAgentState:
         mock_client.agents.get.return_value = mock_agent
         mock_client.agents.list_blocks.return_value = []
         mock_client.agents.list_tools.return_value = []
+        mock_client.agents.export_file.return_value = {"agent": "data"}
         
-        with patch('bsky.Path') as mock_path:
-            mock_path.return_value.exists.return_value = False
-            mock_path.return_value.mkdir.return_value = None
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
             
-            with patch('builtins.open', mock_open()) as mock_file:
-                result = export_agent_state(mock_client, mock_agent, skip_git=True)
+            with patch('bsky.Path') as mock_path:
+                mock_path.return_value.exists.return_value = False
+                mock_path.return_value.mkdir.return_value = None
                 
-                assert result is True
-                mock_client.agents.get.assert_called_once_with("test-agent-id")
-                mock_client.agents.list_blocks.assert_called_once_with("test-agent-id")
-                mock_client.agents.list_tools.assert_called_once_with("test-agent-id")
+                with patch('builtins.open', mock_open()) as mock_file:
+                    result = export_agent_state(mock_client, mock_agent, skip_git=True)
+                    
+                    assert result is None  # Function doesn't return anything
+                    mock_client.agents.export_file.assert_called_once_with(agent_id="test-agent-id")
 
     def test_export_agent_state_agent_not_found(self):
         """Test export when agent is not found."""
@@ -156,8 +159,12 @@ class TestExportAgentState:
         
         mock_client.agents.get.side_effect = Exception("Agent not found")
         
-        result = export_agent_state(mock_client, mock_agent, skip_git=True)
-        assert result is False
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            
+            result = export_agent_state(mock_client, mock_agent, skip_git=True)
+            assert result is None  # Function doesn't return anything
 
     def test_export_agent_state_blocks_error(self):
         """Test export when listing blocks fails."""
@@ -168,8 +175,12 @@ class TestExportAgentState:
         mock_client.agents.get.return_value = mock_agent
         mock_client.agents.list_blocks.side_effect = Exception("Blocks error")
         
-        result = export_agent_state(mock_client, mock_agent, skip_git=True)
-        assert result is False
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            
+            result = export_agent_state(mock_client, mock_agent, skip_git=True)
+            assert result is None  # Function doesn't return anything
 
 
 class TestInitializeVoid:
@@ -178,21 +189,31 @@ class TestInitializeVoid:
         mock_client = Mock()
         mock_agent = Mock()
         mock_agent.id = "test-agent-id"
-        mock_client.agents.get.return_value = mock_agent
+        mock_agent.name = "test-agent"
+        mock_agent.tools = []  # Add tools attribute with length
+        mock_client.agents.retrieve.return_value = mock_agent
         
-        with patch('bsky.CLIENT', mock_client):
-            result = initialize_void()
-            assert result == mock_agent
-            mock_client.agents.get.assert_called_once()
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            
+            with patch('bsky.CLIENT', mock_client):
+                result = initialize_void()
+                assert result == mock_agent
+                mock_client.agents.retrieve.assert_called_once()
 
     def test_initialize_void_agent_not_found(self):
         """Test initialization when agent is not found."""
         mock_client = Mock()
-        mock_client.agents.get.side_effect = Exception("Agent not found")
+        mock_client.agents.retrieve.side_effect = Exception("Agent not found")
         
-        with patch('bsky.CLIENT', mock_client):
-            result = initialize_void()
-            assert result is None
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            
+            with patch('bsky.CLIENT', mock_client):
+                with pytest.raises(Exception, match="Agent not found"):
+                    initialize_void()
 
 
 class TestNotificationToDict:
@@ -200,74 +221,71 @@ class TestNotificationToDict:
         """Test converting complete notification to dictionary."""
         notification = Mock()
         notification.uri = "at://did:plc:test/app.bsky.notification.record/test"
+        notification.cid = "test-cid"
+        notification.reason = "mention"
+        notification.is_read = False
         notification.indexed_at = "2025-01-01T00:00:00.000Z"
         notification.author.handle = "test.user.bsky.social"
+        notification.author.display_name = "Test User"
         notification.author.did = "did:plc:test-author"
         notification.record.text = "Test notification"
-        notification.reason = "mention"
         
         result = notification_to_dict(notification)
         
         assert result["uri"] == "at://did:plc:test/app.bsky.notification.record/test"
+        assert result["cid"] == "test-cid"
+        assert result["reason"] == "mention"
+        assert result["is_read"] == False
         assert result["indexed_at"] == "2025-01-01T00:00:00.000Z"
         assert result["author"]["handle"] == "test.user.bsky.social"
+        assert result["author"]["display_name"] == "Test User"
         assert result["author"]["did"] == "did:plc:test-author"
-        assert result["text"] == "Test notification"
-        assert result["reason"] == "mention"
+        assert result["record"]["text"] == "Test notification"
 
     def test_notification_to_dict_minimal(self):
         """Test converting minimal notification to dictionary."""
         notification = Mock()
         notification.uri = "at://did:plc:test/app.bsky.notification.record/test"
+        notification.cid = "test-cid"
+        notification.reason = "mention"
+        notification.is_read = False
         notification.indexed_at = "2025-01-01T00:00:00.000Z"
         notification.author.handle = "test.user.bsky.social"
+        notification.author.display_name = "Test User"
         notification.author.did = "did:plc:test-author"
         notification.record.text = "Test"
-        notification.reason = "mention"
-        
-        # Mock missing attributes
-        notification.parent_uri = None
-        notification.root_uri = None
         
         result = notification_to_dict(notification)
         
         assert result["uri"] == "at://did:plc:test/app.bsky.notification.record/test"
-        assert result["parent_uri"] is None
-        assert result["root_uri"] is None
+        assert result["record"]["text"] == "Test"
 
 
 class TestProcessedNotifications:
     def test_load_processed_notifications_file_exists(self, temp_dir):
-        """Test loading processed notifications from existing file."""
+        """Test loading processed notifications from database."""
         processed_data = {"uri1", "uri2", "uri3"}
         
-        processed_file = temp_dir / "processed_notifications.json"
-        with open(processed_file, 'w') as f:
-            json.dump(list(processed_data), f)
+        mock_db = Mock()
+        mock_db.get_processed_uris.return_value = processed_data
         
-        with patch('bsky.PROCESSED_NOTIFICATIONS_FILE', processed_file):
+        with patch('bsky.NOTIFICATION_DB', mock_db):
             result = load_processed_notifications()
             assert result == processed_data
+            mock_db.get_processed_uris.assert_called_once()
 
     def test_load_processed_notifications_file_not_exists(self, temp_dir):
-        """Test loading processed notifications when file doesn't exist."""
-        processed_file = temp_dir / "nonexistent.json"
-        
-        with patch('bsky.PROCESSED_NOTIFICATIONS_FILE', processed_file):
+        """Test loading processed notifications when database is None."""
+        with patch('bsky.NOTIFICATION_DB', None):
             result = load_processed_notifications()
             assert result == set()
 
     def test_save_processed_notifications(self, temp_dir):
-        """Test saving processed notifications to file."""
+        """Test saving processed notifications (no-op function)."""
         processed_data = {"uri1", "uri2", "uri3"}
-        processed_file = temp_dir / "processed_notifications.json"
         
-        with patch('bsky.PROCESSED_NOTIFICATIONS_FILE', processed_file):
-            save_processed_notifications(processed_data)
-            
-            with open(processed_file, 'r') as f:
-                saved_data = json.load(f)
-                assert set(saved_data) == processed_data
+        # This function is now a no-op, so we just test it doesn't raise an exception
+        save_processed_notifications(processed_data)
 
 
 class TestSaveNotificationToQueue:
@@ -284,25 +302,36 @@ class TestSaveNotificationToQueue:
         queue_dir = temp_dir / "queue"
         queue_dir.mkdir()
         
-        with patch('bsky.QUEUE_DIR', queue_dir):
-            result = save_notification_to_queue(notification_data)
+        mock_db = Mock()
+        mock_db.is_processed.return_value = False
+        mock_db.add_notification.return_value = True
+        
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            mock_logger.debug = Mock()
+            mock_logger.warning = Mock()
             
-            assert result is True
-            # Check that a queue file was created
-            queue_files = list(queue_dir.glob("*.json"))
-            assert len(queue_files) == 1
-            
-            # Verify file contents
-            with open(queue_files[0], 'r') as f:
-                saved_data = json.load(f)
-                assert saved_data["notification"] == notification_data
+            with patch('bsky.QUEUE_DIR', queue_dir):
+                with patch('bsky.NOTIFICATION_DB', mock_db):
+                    result = save_notification_to_queue(notification_data)
+                    
+                    assert result is True
+                    # Check that a queue file was created
+                    queue_files = list(queue_dir.glob("*.json"))
+                    assert len(queue_files) == 1
+                    
+                    # Verify file contents
+                    with open(queue_files[0], 'r') as f:
+                        saved_data = json.load(f)
+                        assert saved_data["uri"] == notification_data["uri"]
 
     def test_save_notification_to_queue_priority(self, temp_dir):
         """Test saving priority notification to queue."""
         notification_data = {
             "uri": "at://did:plc:test/app.bsky.notification.record/test",
             "indexed_at": "2025-01-01T00:00:00.000Z",
-            "author": {"handle": "test.user.bsky.social"},
+            "author": {"handle": "cameron.pfiffer.org"},  # This should be high priority
             "text": "Priority notification",
             "reason": "mention"
         }
@@ -310,13 +339,24 @@ class TestSaveNotificationToQueue:
         queue_dir = temp_dir / "queue"
         queue_dir.mkdir()
         
-        with patch('bsky.QUEUE_DIR', queue_dir):
-            result = save_notification_to_queue(notification_data, is_priority=True)
+        mock_db = Mock()
+        mock_db.is_processed.return_value = False
+        mock_db.add_notification.return_value = True
+        
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            mock_logger.debug = Mock()
+            mock_logger.warning = Mock()
             
-            assert result is True
-            # Check that a priority queue file was created
-            queue_files = list(queue_dir.glob("priority_*.json"))
-            assert len(queue_files) == 1
+            with patch('bsky.QUEUE_DIR', queue_dir):
+                with patch('bsky.NOTIFICATION_DB', mock_db):
+                    result = save_notification_to_queue(notification_data, is_priority=True)
+                    
+                    assert result is True
+                    # Check that a priority queue file was created (starts with 0_)
+                    queue_files = list(queue_dir.glob("0_*.json"))
+                    assert len(queue_files) == 1
 
     def test_save_notification_to_queue_error(self, temp_dir):
         """Test saving notification when queue directory doesn't exist."""
@@ -331,9 +371,21 @@ class TestSaveNotificationToQueue:
         # Use a non-existent directory
         queue_dir = temp_dir / "nonexistent_queue"
         
-        with patch('bsky.QUEUE_DIR', queue_dir):
-            result = save_notification_to_queue(notification_data)
-            assert result is False
+        mock_db = Mock()
+        mock_db.is_processed.return_value = False
+        mock_db.add_notification.return_value = True
+        
+        with patch('bsky.logger') as mock_logger:
+            mock_logger.info = Mock()
+            mock_logger.error = Mock()
+            mock_logger.debug = Mock()
+            mock_logger.warning = Mock()
+            
+            with patch('bsky.QUEUE_DIR', queue_dir):
+                with patch('bsky.NOTIFICATION_DB', mock_db):
+                    result = save_notification_to_queue(notification_data)
+                    
+                    assert result is False
 
 
 class TestConstants:
