@@ -1,6 +1,6 @@
 """Reply tool for Bluesky - a simple tool for the Letta agent to indicate a reply."""
 from typing import List, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ReplyArgs(BaseModel):
@@ -13,7 +13,8 @@ class ReplyArgs(BaseModel):
         description="Language code for the posts (e.g., 'en-US', 'es', 'ja', 'th'). Defaults to 'en-US'"
     )
     
-    @validator('messages')
+    @field_validator('messages')
+    @classmethod
     def validate_messages(cls, v):
         if not v or len(v) == 0:
             raise ValueError("Messages list cannot be empty")

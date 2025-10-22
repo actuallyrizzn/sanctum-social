@@ -1,6 +1,6 @@
 """Thread tool for adding posts to X threads atomically."""
 from typing import Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class XThreadPostArgs(BaseModel):
@@ -9,7 +9,8 @@ class XThreadPostArgs(BaseModel):
         description="Text content for the X post (max 280 characters)"
     )
     
-    @validator('text')
+    @field_validator('text')
+    @classmethod
     def validate_text_length(cls, v):
         if len(v) > 280:
             raise ValueError(f"Text exceeds 280 character limit (current: {len(v)} characters)")

@@ -3,7 +3,7 @@ import os
 import json
 import requests
 from typing import Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from requests_oauthlib import OAuth1
 
 
@@ -13,7 +13,8 @@ class PostToXArgs(BaseModel):
         description="Text content for the X post (max 280 characters)"
     )
     
-    @validator('text')
+    @field_validator('text')
+    @classmethod
     def validate_text_length(cls, v):
         if len(v) > 280:
             raise ValueError(f"Text exceeds 280 character limit (current: {len(v)} characters)")

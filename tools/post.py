@@ -1,6 +1,6 @@
 """Post tool for creating Bluesky posts."""
 from typing import List, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class PostArgs(BaseModel):
@@ -13,7 +13,8 @@ class PostArgs(BaseModel):
         description="Language code for the posts (e.g., 'en-US', 'es', 'ja', 'th'). Defaults to 'en-US'"
     )
     
-    @validator('text')
+    @field_validator('text')
+    @classmethod
     def validate_text_list(cls, v):
         if not v or len(v) == 0:
             raise ValueError("Text list cannot be empty")

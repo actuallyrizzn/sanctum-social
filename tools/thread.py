@@ -1,6 +1,6 @@
 """Thread tool for adding posts to Bluesky threads atomically."""
 from typing import Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ReplyThreadPostArgs(BaseModel):
@@ -13,7 +13,8 @@ class ReplyThreadPostArgs(BaseModel):
         description="Language code for the post (e.g., 'en-US', 'es', 'ja', 'th'). Defaults to 'en-US'"
     )
     
-    @validator('text')
+    @field_validator('text')
+    @classmethod
     def validate_text_length(cls, v):
         if len(v) > 300:
             raise ValueError(f"Text exceeds 300 character limit (current: {len(v)} characters)")
