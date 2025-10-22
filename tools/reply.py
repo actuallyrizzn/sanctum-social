@@ -38,16 +38,16 @@ def bluesky_reply(messages: List[str], lang: str = "en-US") -> str:
         Confirmation message with language info and message count
         
     Raises:
-        Exception: If messages list is invalid or messages exceed limits
+        ValueError: If messages list is invalid or messages exceed limits
     """
     if not messages or len(messages) == 0:
-        raise Exception("Messages list cannot be empty")
+        raise ValueError("Messages list cannot be empty")
     if len(messages) > 4:
-        raise Exception(f"Cannot send more than 4 reply messages (current: {len(messages)} messages)")
+        raise ValueError(f"Cannot send more than 4 reply messages (current: {len(messages)} messages)")
     
     for i, message in enumerate(messages):
         if len(message) > 300:
-            raise Exception(f"Message {i+1} cannot be longer than 300 characters (current: {len(message)} characters)")
+            raise ValueError(f"Message {i+1} cannot be longer than 300 characters (current: {len(message)} characters)")
     
     if len(messages) == 1:
         return f'Reply sent (language: {lang})'
