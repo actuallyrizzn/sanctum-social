@@ -8,7 +8,7 @@ from unittest.mock import patch, mock_open
 import pytest
 import yaml
 
-from config_loader import ConfigLoader, get_config, get_letta_config, get_bluesky_config
+from config_loader import ConfigLoader, get_config, get_letta_config, get_bluesky_config, get_default_config, validate_configuration, check_config_health
 
 
 class TestConfigLoader:
@@ -257,3 +257,175 @@ def test_config_value_types(mock_config_file, config_key, expected_type):
     
     if value is not None:
         assert isinstance(value, expected_type), f"Expected {expected_type}, got {type(value)} for {config_key}"
+
+
+class TestDefaultConfig:
+    """Test cases for default configuration functionality."""
+    
+    def test_get_default_config(self):
+        """Test that default configuration is properly structured."""
+        default_config = get_default_config()
+        
+        # Check required sections exist
+        assert 'letta' in default_config
+        assert 'bluesky' in default_config
+        assert 'bot' in default_config
+        assert 'threading' in default_config
+        assert 'queue' in default_config
+        assert 'logging' in default_config
+        
+        # Check required fields in letta section
+        assert 'api_key' in default_config['letta']
+        assert 'agent_id' in default_config['letta']
+        assert 'timeout' in default_config['letta']
+        
+        # Check required fields in bluesky section
+        assert 'username' in default_config['bluesky']
+        assert 'password' in default_config['bluesky']
+        assert 'pds_uri' in default_config['bluesky']
+        
+        # Check bot agent blocks
+        assert 'blocks' in default_config['bot']['agent']
+        assert 'zeitgeist' in default_config['bot']['agent']['blocks']
+        assert 'persona' in default_config['bot']['agent']['blocks']
+        assert 'humans' in default_config['bot']['agent']['blocks']
+
+
+class TestConfigLoaderWithDefaults:
+    """Test cases for ConfigLoader with use_defaults=True."""
+    
+    def test_init_with_defaults_missing_file(self, temp_dir):
+        """Test ConfigLoader initialization with defaults when file is missing."""
+        missing_config = temp_dir / "missing.yaml"
+        
+        with patch('config_loader.logger') as mock_logger:
+            loader = ConfigLoader(str(missing_config), use_defaults=True)
+            
+            # Should use default config
+            assert loader._config is not None
+            assert loader._config['letta']['api_key'] == 'dev-letta-api-key'
+            assert loader._config['bluesky']['username'] == 'dev.handle.bsky.social'
+            
+            # Should log warning
+            mock_logger.warning.assert_called_once()
+    
+    def test_init_with_defaults_existing_file(self, mock_config_file):
+        """Test ConfigLoader initialization with defaults when file exists."""
+        loader = ConfigLoader(str(mock_config_file), use_defaults=True)
+        
+        # Should use file config, not defaults
+        assert loader._config is not None
+        assert loader._config['letta']['api_key'] == 'test-letta-api-key'  # From file
+        assert loader._config['bluesky']['username'] == 'test.bsky.social'  # From file
+
+
+class TestConfigValidation:
+    """Test cases for configuration validation functionality."""
+    
+    def test_validate_config_valid(self, mock_config_file):
+        """Test validation with valid configuration."""
+        loader = ConfigLoader(str(mock_config_file))
+        issues = loader.validate_config()
+        
+        # Should have no issues
+        assert len(issues) == 0
+    
+    def test_validate_config_missing_fields(self, temp_dir):
+        """Test validation with missing required fields."""
+        incomplete_config = temp_dir / "incomplete.yaml"
+        incomplete_data = {
+            "letta": {
+                "api_key": "test-key"
+                # Missing agent_id
+            },
+            "bluesky": {
+                "username": "test.bsky.social"
+                # Missing password
+            }
+        }
+        
+        with open(incomplete_config, 'w') as f:
+            yaml.dump(incomplete_data, f)
+        
+        loader = ConfigLoader(str(incomplete_config))
+        issues = loader.validate_config()
+        
+        # Should have issues
+        assert len(issues) == 2
+        assert 'letta' in issues
+        assert 'agent_id' in issues['letta']
+        assert 'bluesky' in issues
+        assert 'password' in issues['bluesky']
+    
+    def test_is_config_valid_true(self, mock_config_file):
+        """Test is_config_valid returns True for valid config."""
+        loader = ConfigLoader(str(mock_config_file))
+        assert loader.is_config_valid() is True
+    
+    def test_is_config_valid_false(self, temp_dir):
+        """Test is_config_valid returns False for invalid config."""
+        incomplete_config = temp_dir / "incomplete.yaml"
+        incomplete_data = {
+            "letta": {
+                "api_key": "test-key"
+                # Missing agent_id
+            }
+        }
+        
+        with open(incomplete_config, 'w') as f:
+            yaml.dump(incomplete_data, f)
+        
+        loader = ConfigLoader(str(incomplete_config))
+        assert loader.is_config_valid() is False
+
+
+class TestValidationFunctions:
+    """Test cases for validation utility functions."""
+    
+    def test_validate_configuration_valid(self, mock_config_file):
+        """Test validate_configuration with valid config."""
+        result = validate_configuration(str(mock_config_file))
+        
+        assert result['valid'] is True
+        assert len(result['issues']) == 0
+        assert result['exists'] is True
+        assert 'valid' in result['message']
+    
+    def test_validate_configuration_invalid(self, temp_dir):
+        """Test validate_configuration with invalid config."""
+        incomplete_config = temp_dir / "incomplete.yaml"
+        incomplete_data = {
+            "letta": {
+                "api_key": "test-key"
+                # Missing agent_id
+            }
+        }
+        
+        with open(incomplete_config, 'w') as f:
+            yaml.dump(incomplete_data, f)
+        
+        result = validate_configuration(str(incomplete_config))
+        
+        assert result['valid'] is False
+        assert len(result['issues']) > 0
+        assert result['exists'] is True
+        assert 'issue' in result['message']
+    
+    def test_validate_configuration_missing_file(self, temp_dir):
+        """Test validate_configuration with missing file."""
+        missing_config = temp_dir / "missing.yaml"
+        result = validate_configuration(str(missing_config))
+        
+        assert result['valid'] is False
+        assert result['exists'] is False
+        assert 'error' in result['issues']
+    
+    def test_check_config_health(self, mock_config_file, capsys):
+        """Test check_config_health function."""
+        check_config_health()
+        
+        captured = capsys.readouterr()
+        assert "Configuration Health Check" in captured.out
+        assert "Config file:" in captured.out
+        assert "Exists:" in captured.out
+        assert "Valid:" in captured.out

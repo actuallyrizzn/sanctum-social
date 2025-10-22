@@ -21,7 +21,10 @@ except ImportError:
 try:
     from factory import Factory
 except ImportError:
-    Factory = None
+    # Create a dummy Factory class if factory_boy is not available
+    class Factory:
+        def __init__(self, *args, **kwargs):
+            pass
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent

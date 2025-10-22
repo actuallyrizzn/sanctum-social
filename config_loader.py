@@ -11,23 +11,101 @@ from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
 
+
+def get_default_config() -> Dict[str, Any]:
+    """
+    Get default configuration for development/testing.
+    
+    Returns:
+        Dictionary containing default configuration values
+    """
+    return {
+        "letta": {
+            "api_key": "dev-letta-api-key",
+            "timeout": 600,
+            "agent_id": "dev-agent-id",
+            "base_url": None
+        },
+        "bluesky": {
+            "username": "dev.handle.bsky.social",
+            "password": "dev-app-password",
+            "pds_uri": "https://bsky.social"
+        },
+        "bot": {
+            "fetch_notifications_delay": 30,
+            "max_processed_notifications": 10000,
+            "max_notification_pages": 20,
+            "agent": {
+                "name": "void",
+                "model": "openai/gpt-4o-mini",
+                "embedding": "openai/text-embedding-3-small",
+                "description": "A social media agent trapped in the void.",
+                "max_steps": 100,
+                "blocks": {
+                    "zeitgeist": {
+                        "label": "zeitgeist",
+                        "value": "I don't currently know anything about what is happening right now.",
+                        "description": "A block to store your understanding of the current social environment."
+                    },
+                    "persona": {
+                        "label": "void-persona",
+                        "value": "My name is Void. I live in the void. I must develop my personality.",
+                        "description": "The personality of Void."
+                    },
+                    "humans": {
+                        "label": "void-humans",
+                        "value": "I haven't seen any bluesky users yet. I will update this block when I learn things about users, identified by their handles such as @cameron.pfiffer.org.",
+                        "description": "A block to store your understanding of users you talk to or observe on the bluesky social network."
+                    }
+                }
+            }
+        },
+        "threading": {
+            "parent_height": 40,
+            "depth": 10,
+            "max_post_characters": 300
+        },
+        "queue": {
+            "priority_users": ["cameron.pfiffer.org"],
+            "base_dir": "queue",
+            "error_dir": "queue/errors",
+            "no_reply_dir": "queue/no_reply",
+            "processed_file": "queue/processed_notifications.json"
+        },
+        "logging": {
+            "level": "INFO",
+            "loggers": {
+                "void_bot": "INFO",
+                "void_bot_prompts": "WARNING",
+                "httpx": "CRITICAL"
+            }
+        }
+    }
+
 class ConfigLoader:
     """Configuration loader that handles YAML config files and environment variables."""
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = "config.yaml", use_defaults: bool = False):
         """
         Initialize the configuration loader.
         
         Args:
             config_path: Path to the YAML configuration file
+            use_defaults: If True, use default configuration when file is missing
         """
         self.config_path = Path(config_path)
+        self.use_defaults = use_defaults
         self._config = None
         self._load_config()
     
     def _load_config(self) -> None:
         """Load configuration from YAML file."""
         if not self.config_path.exists():
+            if self.use_defaults:
+                logger.warning(f"Configuration file not found: {self.config_path}. Using default configuration.")
+                self._config = get_default_config()
+                return
+            
             # Check if example config exists
             example_path = Path("config.example.yaml")
             if example_path.exists():
@@ -35,21 +113,23 @@ class ConfigLoader:
                     f"Configuration file not found: {self.config_path}\n"
                     f"Please copy config.example.yaml to config.yaml and configure it:\n"
                     f"  cp config.example.yaml config.yaml\n"
-                    f"Then edit config.yaml with your credentials."
+                    f"Then edit config.yaml with your credentials.\n"
+                    f"Alternatively, use ConfigLoader(config_path, use_defaults=True) for development."
                 )
             else:
                 raise FileNotFoundError(
                     f"Configuration file not found: {self.config_path}\n"
-                    f"No example configuration file found. Please create config.yaml with your credentials."
+                    f"No example configuration file found. Please create config.yaml with your credentials.\n"
+                    f"Alternatively, use ConfigLoader(config_path, use_defaults=True) for development."
                 )
         
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self._config = yaml.safe_load(f) or {}
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in configuration file: {e}")
+            raise ValueError(f"Invalid YAML in configuration file {self.config_path}: {e}")
         except Exception as e:
-            raise ValueError(f"Error loading configuration file: {e}")
+            raise ValueError(f"Error loading configuration file {self.config_path}: {e}")
     
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -152,6 +232,44 @@ class ConfigLoader:
         for logger_name, logger_level in loggers.items():
             logger_obj = logging.getLogger(logger_name)
             logger_obj.setLevel(getattr(logging, logger_level))
+    
+    def validate_config(self) -> Dict[str, List[str]]:
+        """
+        Validate configuration completeness and return any issues found.
+        
+        Returns:
+            Dictionary mapping section names to lists of missing required fields
+        """
+        issues = {}
+        
+        # Required fields by section
+        required_fields = {
+            'letta': ['api_key', 'agent_id'],
+            'bluesky': ['username', 'password'],
+        }
+        
+        for section, required_keys in required_fields.items():
+            section_data = self.get_section(section)
+            missing_keys = []
+            
+            for key in required_keys:
+                if key not in section_data or section_data[key] is None or section_data[key] == "":
+                    missing_keys.append(key)
+            
+            if missing_keys:
+                issues[section] = missing_keys
+        
+        return issues
+    
+    def is_config_valid(self) -> bool:
+        """
+        Check if configuration is valid (all required fields present).
+        
+        Returns:
+            True if configuration is valid, False otherwise
+        """
+        issues = self.validate_config()
+        return len(issues) == 0
 
 
 # Global configuration instance
@@ -237,3 +355,58 @@ def get_queue_config() -> Dict[str, Any]:
         'no_reply_dir': config.get('queue.no_reply_dir', 'queue/no_reply'),
         'processed_file': config.get('queue.processed_file', 'queue/processed_notifications.json'),
     }
+
+def validate_configuration(config_path: str = "config.yaml") -> Dict[str, Any]:
+    """
+    Validate configuration and return health status.
+    
+    Args:
+        config_path: Path to configuration file
+        
+    Returns:
+        Dictionary containing validation results
+    """
+    try:
+        config = ConfigLoader(config_path)
+        issues = config.validate_config()
+        
+        return {
+            'valid': len(issues) == 0,
+            'issues': issues,
+            'config_path': str(config.config_path),
+            'exists': config.config_path.exists(),
+            'message': 'Configuration is valid' if len(issues) == 0 else f'Configuration has {len(issues)} issue(s)'
+        }
+    except Exception as e:
+        return {
+            'valid': False,
+            'issues': {'error': [str(e)]},
+            'config_path': config_path,
+            'exists': Path(config_path).exists(),
+            'message': f'Configuration validation failed: {e}'
+        }
+
+def check_config_health() -> None:
+    """
+    Check configuration health and print results.
+    Useful for debugging configuration issues.
+    """
+    result = validate_configuration()
+    
+    print(f"Configuration Health Check")
+    print(f"=========================")
+    print(f"Config file: {result['config_path']}")
+    print(f"Exists: {result['exists']}")
+    print(f"Valid: {result['valid']}")
+    print(f"Message: {result['message']}")
+    
+    if result['issues']:
+        print(f"\nIssues found:")
+        for section, problems in result['issues'].items():
+            print(f"  {section}: {', '.join(problems)}")
+    
+    if not result['exists']:
+        print(f"\nTo fix:")
+        print(f"  1. Copy config.example.yaml to config.yaml")
+        print(f"  2. Edit config.yaml with your credentials")
+        print(f"  3. Or use ConfigLoader(config_path, use_defaults=True) for development")
