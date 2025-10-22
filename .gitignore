@@ -186,6 +186,10 @@ test_*.py
 debug_*.py
 scratch_*.py
 
+# But allow legitimate test files in tests/ directory
+!tests/**/test_*.py
+!tests/**/*_test.py
+
 # Investigation files
 *_investigation.md
 *_solution.md

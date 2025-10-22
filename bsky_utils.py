@@ -2,6 +2,8 @@ import os
 import logging
 import uuid
 import time
+import json
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from atproto_client import Client, Session, SessionEvent, models
 
@@ -211,27 +213,250 @@ def thread_to_yaml_string(thread, strip_metadata=True):
 
 
 def get_session(username: str) -> Optional[str]:
+    """Get session with enhanced error handling and validation."""
+    try:
+        # Try enhanced version first
+        return get_session_with_retry(username)
+    except Exception as e:
+        logger.debug(f"Enhanced session loading failed, falling back to legacy method: {e}")
+        # Fall back to legacy method for backward compatibility
+        import os
+        session_file = os.path.join(os.getcwd(), f"session_{username}.txt")
+        try:
+            with open(session_file, encoding="UTF-8") as f:
+                return f.read()
+        except FileNotFoundError:
+            logger.debug(f"No existing session found for {username}")
+            return None
+        except Exception as legacy_error:
+            logger.error(f"Error getting session for {username}: {legacy_error}")
+            return None
+
+def save_session(username: str, session_string: str) -> None:
+    """Save session with enhanced error handling and validation."""
+    try:
+        # Try enhanced version first, but disable validation for backward compatibility
+        success = save_session_with_retry(username, session_string, validate=False)
+        if success:
+            return
+    except Exception as e:
+        logger.debug(f"Enhanced session saving failed, falling back to legacy method: {e}")
+    
+    # Fall back to legacy method for backward compatibility
     import os
     session_file = os.path.join(os.getcwd(), f"session_{username}.txt")
     try:
-        with open(session_file, encoding="UTF-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        logger.debug(f"No existing session found for {username}")
-        return None
-
-def save_session(username: str, session_string: str) -> None:
-    import os
-    session_file = os.path.join(os.getcwd(), f"session_{username}.txt")
-    with open(session_file, "w", encoding="UTF-8") as f:
-        f.write(session_string)
-    logger.debug(f"Session saved for {username}")
+        with open(session_file, "w", encoding="UTF-8") as f:
+            f.write(session_string)
+        logger.debug(f"Session saved for {username}")
+    except Exception as legacy_error:
+        logger.error(f"Failed to save session for {username}: {legacy_error}")
+        raise RuntimeError(f"Failed to save session for {username}")
 
 def on_session_change(username: str, event: SessionEvent, session: Session) -> None:
     logger.debug(f"Session changed: {event} {repr(session)}")
     if event in (SessionEvent.CREATE, SessionEvent.REFRESH):
         logger.debug(f"Saving changed session for {username}")
         save_session(username, session.export())
+
+
+# Enhanced Session Management Functions
+
+def get_session_config() -> Dict[str, Any]:
+    """Get session management configuration from config or defaults."""
+    try:
+        from config_loader import get_config
+        config = get_config()
+        session_config = config.get('session_management', {})
+    except Exception:
+        session_config = {}
+    
+    return {
+        'directory': session_config.get('directory', 'sessions'),
+        'max_age_days': session_config.get('max_age_days', 30),
+        'retry_attempts': session_config.get('retry_attempts', 3),
+        'retry_delay': session_config.get('retry_delay', 1.0),
+        'validate_sessions': session_config.get('validate_sessions', True)
+    }
+
+
+def get_session_path(username: str, session_dir: Optional[str] = None) -> Path:
+    """Get session file path with proper directory handling."""
+    if session_dir is None:
+        # Use current working directory for backward compatibility
+        import os
+        session_dir = os.getcwd()
+    
+    # Create session directory if it doesn't exist
+    session_path = Path(session_dir)
+    session_path.mkdir(parents=True, exist_ok=True)
+    
+    return session_path / f"session_{username}.txt"
+
+
+def validate_session(session_string: str) -> bool:
+    """Validate session data format and basic structure."""
+    if not session_string or not isinstance(session_string, str):
+        return False
+    
+    try:
+        # Try to parse as JSON to validate format
+        session_data = json.loads(session_string)
+        
+        # Check for required fields
+        required_fields = ['accessJwt', 'refreshJwt', 'handle', 'did']
+        if not all(field in session_data for field in required_fields):
+            logger.warning("Session missing required fields")
+            return False
+        
+        # Basic validation of field values
+        if not session_data.get('accessJwt') or not session_data.get('did'):
+            logger.warning("Session has invalid JWT or DID")
+            return False
+        
+        return True
+    except json.JSONDecodeError:
+        logger.warning("Session data is not valid JSON")
+        return False
+    except Exception as e:
+        logger.warning(f"Session validation error: {e}")
+        return False
+
+
+def get_session_with_retry(username: str, max_retries: int = 3, session_dir: Optional[str] = None) -> Optional[str]:
+    """Get session with retry logic for transient failures."""
+    config = get_session_config()
+    max_retries = min(max_retries, config['retry_attempts'])
+    
+    for attempt in range(max_retries):
+        try:
+            session_path = get_session_path(username, session_dir)
+            
+            if not session_path.exists():
+                logger.debug(f"No existing session found for {username}")
+                return None
+            
+            with open(session_path, 'r', encoding='UTF-8') as f:
+                session_string = f.read()
+            
+            # Validate session if configured to do so
+            if config['validate_sessions'] and not validate_session(session_string):
+                logger.warning(f"Invalid session data for {username}, removing file")
+                session_path.unlink()
+                return None
+            
+            logger.debug(f"Successfully loaded session for {username}")
+            return session_string
+            
+        except (PermissionError, OSError) as e:
+            logger.warning(f"File access error for {username} (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                logger.error(f"Failed to read session for {username} after {max_retries} attempts")
+                return None
+            time.sleep(config['retry_delay'] * (2 ** attempt))  # Exponential backoff
+            
+        except Exception as e:
+            logger.error(f"Unexpected error reading session for {username}: {e}")
+            return None
+    
+    return None
+
+
+def save_session_with_retry(username: str, session_string: str, max_retries: int = 3, session_dir: Optional[str] = None, validate: bool = True) -> bool:
+    """Save session with exponential backoff retry logic."""
+    config = get_session_config()
+    max_retries = min(max_retries, config['retry_attempts'])
+    
+    # Validate session before saving
+    if validate and config['validate_sessions'] and not validate_session(session_string):
+        logger.error(f"Cannot save invalid session data for {username}")
+        return False
+    
+    for attempt in range(max_retries):
+        try:
+            session_path = get_session_path(username, session_dir)
+            
+            # Write to temporary file first, then rename (atomic operation)
+            temp_path = session_path.with_suffix('.tmp')
+            with open(temp_path, 'w', encoding='UTF-8') as f:
+                f.write(session_string)
+            
+            # Atomic rename
+            temp_path.replace(session_path)
+            
+            logger.debug(f"Successfully saved session for {username}")
+            return True
+            
+        except (PermissionError, OSError) as e:
+            logger.warning(f"File write error for {username} (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                logger.error(f"Failed to save session for {username} after {max_retries} attempts")
+                return False
+            time.sleep(config['retry_delay'] * (2 ** attempt))  # Exponential backoff
+            
+        except Exception as e:
+            logger.error(f"Unexpected error saving session for {username}: {e}")
+            return False
+    
+    return False
+
+
+def cleanup_old_sessions(session_dir: Optional[str] = None, max_age_days: int = 30) -> int:
+    """Clean up old session files."""
+    config = get_session_config()
+    max_age_days = min(max_age_days, config['max_age_days'])
+    
+    if session_dir is None:
+        session_dir = config['directory']
+    
+    try:
+        session_path = Path(session_dir)
+        if not session_path.exists():
+            logger.debug(f"Session directory {session_dir} does not exist")
+            return 0
+    except Exception as e:
+        logger.error(f"Error accessing session directory {session_dir}: {e}")
+        return 0
+    
+    cleaned_count = 0
+    current_time = time.time()
+    max_age_seconds = max_age_days * 24 * 60 * 60
+    
+    try:
+        for session_file in session_path.glob("session_*.txt"):
+            try:
+                # Check file age
+                file_age = current_time - session_file.stat().st_mtime
+                if file_age > max_age_seconds:
+                    logger.debug(f"Removing old session file: {session_file}")
+                    session_file.unlink()
+                    cleaned_count += 1
+                    continue
+                
+                # Check for corrupted sessions
+                try:
+                    with open(session_file, 'r', encoding='UTF-8') as f:
+                        session_data = f.read()
+                    
+                    if config['validate_sessions'] and not validate_session(session_data):
+                        logger.debug(f"Removing corrupted session file: {session_file}")
+                        session_file.unlink()
+                        cleaned_count += 1
+                        
+                except Exception as e:
+                    logger.debug(f"Removing unreadable session file {session_file}: {e}")
+                    session_file.unlink()
+                    cleaned_count += 1
+                    
+            except Exception as e:
+                logger.warning(f"Error processing session file {session_file}: {e}")
+        
+        logger.info(f"Cleaned up {cleaned_count} old/corrupted session files")
+        return cleaned_count
+        
+    except Exception as e:
+        logger.error(f"Error during session cleanup: {e}")
+        return cleaned_count
 
 def init_client(username: str, password: str) -> Client:
     pds_uri = os.getenv("PDS_URI")

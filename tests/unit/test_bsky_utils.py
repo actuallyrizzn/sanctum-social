@@ -273,14 +273,19 @@ class TestSessionManagement:
     def test_get_session_existing_file(self, temp_dir):
         """Test getting session from existing file."""
         session_file = temp_dir / "session_test_user.txt"
-        session_data = "test_session_data"
+        session_data = json.dumps({
+            'accessJwt': 'valid_jwt',
+            'refreshJwt': 'valid_refresh',
+            'handle': 'test.bsky.social',
+            'did': 'did:plc:test123'
+        })
         
         with open(session_file, 'w') as f:
             f.write(session_data)
         
         with patch('os.getcwd', return_value=str(temp_dir)):
             result = get_session("test_user")
-            assert result == "test_session_data"
+            assert result == session_data
 
     def test_get_session_no_file(self, temp_dir):
         """Test getting session when file doesn't exist."""
@@ -290,21 +295,33 @@ class TestSessionManagement:
 
     def test_save_session(self, temp_dir):
         """Test saving session to file."""
+        session_data = json.dumps({
+            'accessJwt': 'valid_jwt',
+            'refreshJwt': 'valid_refresh',
+            'handle': 'test.bsky.social',
+            'did': 'did:plc:test123'
+        })
+        
         with patch('os.getcwd', return_value=str(temp_dir)):
-            save_session("test_user", "test_session_data")
+            save_session("test_user", session_data)
             
             session_file = temp_dir / "session_test_user.txt"
             assert session_file.exists()
             
             with open(session_file, 'r') as f:
                 content = f.read()
-                assert content == "test_session_data"
+                assert content == session_data
 
     def test_on_session_change(self, temp_dir):
         """Test session change handler."""
         with patch('os.getcwd', return_value=str(temp_dir)):
             mock_session = Mock()
-            mock_session.export.return_value = "new_session_data"
+            mock_session.export.return_value = json.dumps({
+                'accessJwt': 'valid_jwt',
+                'refreshJwt': 'valid_refresh',
+                'handle': 'test.bsky.social',
+                'did': 'did:plc:test123'
+            })
             
             # Mock SessionEvent.CREATE
             mock_event = Mock()
@@ -314,6 +331,10 @@ class TestSessionManagement:
             
             session_file = temp_dir / "session_test_user.txt"
             assert session_file.exists()
+            
+            with open(session_file, 'r') as f:
+                content = f.read()
+                assert 'valid_jwt' in content
 
 
 class TestRemoveOutsideQuotes:
