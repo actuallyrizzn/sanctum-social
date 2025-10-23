@@ -565,7 +565,7 @@ class TestRecoveryAndMaintenanceE2E:
                     json.dump(notification, f)
             
             # Test complete queue maintenance workflow
-            with patch('queue_manager.QUEUE_DIR', queue_dir), \
+            with patch('utils.queue_manager.QUEUE_DIR', queue_dir), \
                  patch('queue_manager.QUEUE_ERROR_DIR', error_dir), \
                  patch('queue_manager.QUEUE_NO_REPLY_DIR', no_reply_dir):
                 
@@ -626,7 +626,7 @@ class TestErrorRecoveryE2E:
                 f.write("corrupted database content")
             
             # Test that the system handles database corruption gracefully
-            with patch('notification_recovery.NotificationDB') as mock_db_class:
+            with patch('utils.notification_recovery.NotificationDB') as mock_db_class:
                 mock_db_class.side_effect = Exception("Database corruption detected")
                 
                 with pytest.raises(Exception, match="Database corruption detected"):
@@ -647,9 +647,9 @@ class TestErrorRecoveryE2E:
             restricted_file.chmod(0o444)
             
             # Test that the system handles file permission errors gracefully
-            with patch('queue_manager.QUEUE_DIR', queue_dir), \
-                 patch('queue_manager.QUEUE_ERROR_DIR', Path(temp_dir) / "error"), \
-                 patch('queue_manager.QUEUE_NO_REPLY_DIR', Path(temp_dir) / "no_reply"):
+            with patch('utils.queue_manager.QUEUE_DIR', queue_dir), \
+                 patch('utils.queue_manager.QUEUE_ERROR_DIR', Path(temp_dir) / "error"), \
+                 patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', Path(temp_dir) / "no_reply"):
                 
                 # Should handle permission errors gracefully
                 notifications = list_notifications(show_all=True)

@@ -39,9 +39,9 @@ def load_env_file(env_path=".env"):
                     
                     env_vars[key] = value
                 else:
-                    print(f"⚠️  Warning: Skipping malformed line {line_num} in .env: {line}")
+                    print(f"Warning: Skipping malformed line {line_num} in .env: {line}")
     except Exception as e:
-        print(f"❌ Error reading .env file: {e}")
+        print(f"Error reading .env file: {e}")
     
     return env_vars
 
@@ -125,7 +125,7 @@ def load_existing_config():
         with open("config.yaml", 'r', encoding='utf-8') as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
-        print(f"⚠️  Warning: Could not read existing config.yaml: {e}")
+        print(f"Warning: Could not read existing config.yaml: {e}")
         return None
 
 
@@ -144,13 +144,13 @@ def write_config_yaml(config):
         
         return True
     except Exception as e:
-        print(f"❌ Error writing config.yaml: {e}")
+        print(f"Error writing config.yaml: {e}")
         return False
 
 
 def main():
     """Main migration function."""
-    print("🔄 Void Bot Configuration Migration Tool")
+    print("Void Bot Configuration Migration Tool")
     print("=" * 50)
     print("This tool migrates from .env environment variables to config.yaml")
     print()
@@ -160,40 +160,40 @@ def main():
     has_config = os.path.exists("config.yaml")
     has_example = os.path.exists("config.yaml.example")
     
-    print("📋 Current configuration files:")
-    print(f"   - .env file: {'✅ Found' if has_env else '❌ Not found'}")
-    print(f"   - config.yaml: {'✅ Found' if has_config else '❌ Not found'}")
-    print(f"   - config.yaml.example: {'✅ Found' if has_example else '❌ Not found'}")
+    print("Current configuration files:")
+    print(f"   - .env file: {'Found' if has_env else 'Not found'}")
+    print(f"   - config.yaml: {'Found' if has_config else 'Not found'}")
+    print(f"   - config.yaml.example: {'Found' if has_example else 'Not found'}")
     print()
     
     # If no .env file, suggest creating config from example
     if not has_env:
         if not has_config and has_example:
-            print("💡 No .env file found. Would you like to create config.yaml from the example?")
+            print("No .env file found. Would you like to create config.yaml from the example?")
             response = input("Create config.yaml from example? (y/n): ").lower().strip()
             if response in ['y', 'yes']:
                 try:
                     shutil.copy2("config.yaml.example", "config.yaml")
-                    print("✅ Created config.yaml from config.yaml.example")
-                    print("📝 Please edit config.yaml to add your credentials")
+                    print("Created config.yaml from config.yaml.example")
+                    print("Please edit config.yaml to add your credentials")
                     return
                 except Exception as e:
-                    print(f"❌ Error copying example file: {e}")
+                    print(f"Error copying example file: {e}")
                     return
             else:
-                print("👋 Migration cancelled")
+                print("Migration cancelled")
                 return
         else:
-            print("ℹ️  No .env file found and config.yaml already exists or no example available")
-            print("   If you need to set up configuration, see CONFIG.md")
+            print("No .env file found and config.yaml already exists or no example available")
+            print("   If you need to set up configuration, see docs/CONFIG.md")
             return
     
     # Load environment variables from .env
-    print("🔍 Reading .env file...")
+    print("Reading .env file...")
     env_vars = load_env_file()
     
     if not env_vars:
-        print("⚠️  No environment variables found in .env file")
+        print("No environment variables found in .env file")
         return
     
     print(f"   Found {len(env_vars)} environment variables")
@@ -209,26 +209,26 @@ def main():
     # Load existing config if present
     existing_config = load_existing_config()
     if existing_config:
-        print("📄 Found existing config.yaml - will merge with .env values")
+        print("Found existing config.yaml - will merge with .env values")
     
     # Create configuration
-    print("🏗️  Building configuration...")
+    print("Building configuration...")
     config, migrated_vars = create_config_from_env(env_vars, existing_config)
     
     if not migrated_vars:
-        print("⚠️  No recognized configuration variables found in .env")
+        print("No recognized configuration variables found in .env")
         print("   Recognized variables: LETTA_API_KEY, BSKY_USERNAME, BSKY_PASSWORD, PDS_URI")
         return
     
     print(f"   Migrating {len(migrated_vars)} variables: {', '.join(migrated_vars)}")
     
     # Show preview
-    print("\n📋 Configuration preview:")
+    print("\nConfiguration preview:")
     print("-" * 30)
     
     # Show Letta section
     if 'letta' in config and config['letta']:
-        print("🔧 Letta:")
+        print("Letta:")
         for key, value in config['letta'].items():
             if 'key' in key.lower():
                 display_value = f"***{value[-8:]}" if len(str(value)) > 8 else "***"
@@ -238,7 +238,7 @@ def main():
     
     # Show Bluesky section
     if 'bluesky' in config and config['bluesky']:
-        print("🐦 Bluesky:")
+        print("Bluesky:")
         for key, value in config['bluesky'].items():
             if 'password' in key.lower():
                 display_value = f"***{value[-4:]}" if len(str(value)) > 4 else "***"
@@ -249,73 +249,73 @@ def main():
     print()
     
     # Confirm migration
-    response = input("💾 Proceed with migration? This will update config.yaml (y/n): ").lower().strip()
+    response = input("Proceed with migration? This will update config.yaml (y/n): ").lower().strip()
     if response not in ['y', 'yes']:
-        print("👋 Migration cancelled")
+        print("Migration cancelled")
         return
     
     # Create backups
-    print("💾 Creating backups...")
+    print("Creating backups...")
     backups = backup_existing_files()
     for original, backup in backups:
-        print(f"   Backed up {original} → {backup}")
+        print(f"   Backed up {original} -> {backup}")
     
     # Write new configuration
-    print("✍️  Writing config.yaml...")
+    print("Writing config.yaml...")
     if write_config_yaml(config):
-        print("✅ Successfully created config.yaml")
+        print("Successfully created config.yaml")
         
         # Test the new configuration
-        print("\n🧪 Testing new configuration...")
+        print("\nTesting new configuration...")
         try:
             from core.config import get_config
             test_config = get_config()
-            print("✅ Configuration loads successfully")
+            print("Configuration loads successfully")
             
             # Test specific sections
             try:
                 from core.config import get_letta_config
                 letta_config = get_letta_config()
-                print("✅ Letta configuration valid")
+                print("Letta configuration valid")
             except Exception as e:
-                print(f"⚠️  Letta config issue: {e}")
+                print(f"Letta config issue: {e}")
             
             try:
                 from core.config import get_bluesky_config
                 bluesky_config = get_bluesky_config()
-                print("✅ Bluesky configuration valid")
+                print("Bluesky configuration valid")
             except Exception as e:
-                print(f"⚠️  Bluesky config issue: {e}")
+                print(f"Bluesky config issue: {e}")
                 
         except Exception as e:
-            print(f"❌ Configuration test failed: {e}")
+            print(f"Configuration test failed: {e}")
             return
         
         # Success message and next steps
-        print("\n🎉 Migration completed successfully!")
-        print("\n📖 Next steps:")
+        print("\nMigration completed successfully!")
+        print("\nNext steps:")
         print("   1. Run: python test_config.py")
         print("   2. Test the bot: python bsky.py --test")
         print("   3. If everything works, you can optionally remove the .env file")
-        print("   4. See CONFIG.md for more configuration options")
+        print("   4. See docs/CONFIG.md for more configuration options")
         
         if backups:
-            print(f"\n🗂️  Backup files created:")
+            print(f"\nBackup files created:")
             for original, backup in backups:
                 print(f"     {backup}")
             print("   These can be deleted once you verify everything works")
         
     else:
-        print("❌ Failed to write config.yaml")
+        print("Failed to write config.yaml")
         if backups:
-            print("🔄 Restoring backups...")
+            print("Restoring backups...")
             for original, backup in backups:
                 try:
                     if original != ".env":  # Don't restore .env, keep it as fallback
                         shutil.move(backup, original)
-                        print(f"   Restored {backup} → {original}")
+                        print(f"   Restored {backup} -> {original}")
                 except Exception as e:
-                    print(f"   ❌ Failed to restore {backup}: {e}")
+                    print(f"   Failed to restore {backup}: {e}")
 
 
 if __name__ == "__main__":

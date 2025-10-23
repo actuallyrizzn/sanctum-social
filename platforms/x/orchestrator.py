@@ -52,7 +52,7 @@ X_QUEUE_DIR = Path("data/queues/x")
 X_CACHE_DIR = Path("data/cache/x")
 X_PROCESSED_MENTIONS_FILE = Path("data/queues/x/processed_mentions.json")
 X_LAST_SEEN_FILE = Path("data/queues/x/last_seen_id.json")
-X_DOWNRANK_USERS_FILE = Path("x_downrank_users.txt")
+X_DOWNRANK_USERS_FILE = Path("config/x_downrank_users.txt")
 
 class XClient:
     """X (Twitter) API client for fetching mentions and managing interactions."""
