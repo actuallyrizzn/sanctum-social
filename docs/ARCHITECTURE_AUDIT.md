@@ -552,7 +552,7 @@ logging:
     httpx: "CRITICAL"
 ```
 
-#### `x_config.yaml` (X-Specific)
+#### `config/platforms.yaml` (X-Specific)
 Similar structure focused on X operations with additional fields:
 - `bot.cleanup_interval`: User block cleanup frequency
 - `bot.max_thread_depth`: Maximum thread depth to retrieve
@@ -586,7 +586,7 @@ void/
 ├── x.py                       # X bot main loop + client
 ├── config.yaml                # Primary configuration (gitignored)
 ├── config.example.yaml        # Example configuration template
-├── x_config.yaml              # X-specific configuration
+├── config/platforms.yaml         # X-specific configuration
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # User-facing documentation
 ├── CLAUDE.md                  # Developer guidance for AI assistants
@@ -749,7 +749,7 @@ organon/
 ```
 ┌─────────────────────────────────────────────────────┐
 │ 1. STARTUP                                          │
-│    - Load x_config.yaml                             │
+│    - Load config/platforms.yaml                             │
 │    - Initialize OAuth 1.0a client                   │
 │    - Ensure X platform tools attached               │
 │    - Load downrank users list                       │

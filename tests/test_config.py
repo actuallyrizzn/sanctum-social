@@ -158,7 +158,7 @@ def test_config_loading():
         print("Configuration file not found!")
         print(f"   {e}")
         print("\nTo set up configuration:")
-        print("   1. Copy config.yaml.example to config.yaml")
+        print("   1. Copy config/agent.yaml to config.yaml")
         print("   2. Edit config.yaml with your credentials")
         print("   3. Run this test again")
     except Exception as e:

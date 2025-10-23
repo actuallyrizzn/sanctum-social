@@ -193,7 +193,7 @@ python -c "from config_loader import validate_configuration; import yaml; config
 3. **File Not Found**
    ```bash
    # Copy example configuration
-   cp config.example.yaml config.yaml
+   cp config/agent.yaml config.yaml
    
    # Edit configuration
    nano config.yaml

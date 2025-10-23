@@ -195,7 +195,7 @@ PDS_URI=https://bsky.social  # Optional, defaults to bsky.social
 
 ### X Bot Configuration
 
-The X bot uses a separate configuration file `x_config.yaml` with the following structure:
+The X bot uses a separate configuration file `config/platforms.yaml` with the following structure:
 ```yaml
 x:
   api_key: your_x_bearer_token

@@ -309,7 +309,7 @@ class TestQueueManager:
     
     def test_queue_directories_defined(self):
         """Test that queue directories are properly defined."""
-        assert QUEUE_DIR == Path("queue")
+        assert QUEUE_DIR == Path("data/queues/bluesky")
         assert QUEUE_ERROR_DIR == QUEUE_DIR / "errors"
         assert QUEUE_NO_REPLY_DIR == QUEUE_DIR / "no_reply"
     

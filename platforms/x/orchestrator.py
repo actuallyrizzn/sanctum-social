@@ -571,7 +571,7 @@ class XClient:
         return user_info.get("username") if user_info else None
 
 def load_x_config(config_path: str = "config/platforms.yaml") -> Dict[str, Any]:
-    """Load complete X configuration from x_config.yaml."""
+    """Load complete X configuration from config/platforms.yaml."""
     try:
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
@@ -584,10 +584,10 @@ def load_x_config(config_path: str = "config/platforms.yaml") -> Dict[str, Any]:
         letta_config = config.get('letta', {})
 
         if not x_config.get('api_key') or not x_config.get('user_id'):
-            raise ValueError("X API key and user_id must be configured in x_config.yaml")
+            raise ValueError("X API key and user_id must be configured in config/platforms.yaml")
 
         if not letta_config.get('api_key') or not letta_config.get('agent_id'):
-            raise ValueError("Letta API key and agent_id must be configured in x_config.yaml")
+            raise ValueError("Letta API key and agent_id must be configured in config/platforms.yaml")
 
         return config
     except Exception as e:

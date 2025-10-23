@@ -70,7 +70,7 @@ pip install -r requirements-test.txt
 Create configuration file:
 
 ```bash
-cp config.example.yaml config.yaml
+cp config/agent.yaml config.yaml
 ```
 
 Edit `config.yaml` with your credentials:

@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger("queue_manager")
 
 # Queue directories
-QUEUE_DIR = Path("queue")
+QUEUE_DIR = Path("data/queues/bluesky")
 QUEUE_ERROR_DIR = QUEUE_DIR / "errors"
 QUEUE_NO_REPLY_DIR = QUEUE_DIR / "no_reply"
 

@@ -29,11 +29,11 @@ prompt_logger = logging.getLogger("void_bot.prompts")
 prompt_logger.setLevel(logging.WARNING)
 
 # Discord-specific file paths
-DISCORD_QUEUE_DIR = Path("discord_queue")
-DISCORD_CACHE_DIR = Path("discord_cache")
+DISCORD_QUEUE_DIR = Path("data/queues/discord")
+DISCORD_CACHE_DIR = Path("data/cache/discord")
 DISCORD_PROCESSED_MENTIONS_FILE = DISCORD_QUEUE_DIR / "processed_mentions.json"
 DISCORD_LAST_SEEN_FILE = DISCORD_QUEUE_DIR / "last_seen_id.json"
-DISCORD_DOWNRANK_USERS_FILE = Path("discord_downrank_users.txt")
+DISCORD_DOWNRANK_USERS_FILE = Path("config/discord_downrank_users.txt")
 
 class DiscordRateLimitError(Exception):
     """Exception raised when Discord API rate limit is exceeded"""
