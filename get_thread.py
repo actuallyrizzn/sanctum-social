@@ -9,7 +9,7 @@ import sys
 import logging
 from typing import Optional, Dict, Any
 import yaml
-from bsky_utils import default_login, thread_to_yaml_string
+from platforms.bluesky.utils import default_login, thread_to_yaml_string
 
 # Configure logging
 logging.basicConfig(

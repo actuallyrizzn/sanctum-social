@@ -7,7 +7,7 @@ import sys
 from io import StringIO
 
 # Mock the config loading before importing register_tools
-with patch('config_loader.get_config') as mock_get_config:
+with patch('core.config.get_config') as mock_get_config:
     mock_loader = mock_get_config.return_value
     mock_loader.get_required.side_effect = lambda key: {
         'letta.api_key': 'test-api-key',
@@ -18,7 +18,7 @@ with patch('config_loader.get_config') as mock_get_config:
         'letta.base_url': None
     }.get(key, default)
     
-    from register_tools import (
+    from scripts.register_tools import (
         register_tools,
         list_available_tools,
         TOOL_CONFIGS
@@ -28,8 +28,8 @@ with patch('config_loader.get_config') as mock_get_config:
 class TestRegisterTools:
     """Test cases for register_tools module."""
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_success(self, mock_letta_class, mock_get_letta_config):
         """Test successful tool registration."""
         # Setup mocks
@@ -77,8 +77,8 @@ class TestRegisterTools:
         assert mock_client.tools.upsert_from_function.call_count > 0
         assert mock_client.agents.tools.attach.call_count > 0
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_with_custom_agent_id(self, mock_letta_class, mock_get_letta_config):
         """Test tool registration with custom agent ID."""
         # Setup mocks
@@ -116,8 +116,8 @@ class TestRegisterTools:
         # Verify agent was retrieved with custom ID
         mock_client.agents.retrieve.assert_called_once_with(agent_id='custom-agent-id')
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_with_base_url(self, mock_letta_class, mock_get_letta_config):
         """Test tool registration with custom base URL."""
         # Setup mocks
@@ -159,8 +159,8 @@ class TestRegisterTools:
             base_url='https://custom.letta.com'
         )
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_agent_not_found(self, mock_letta_class, mock_get_letta_config):
         """Test handling when agent is not found."""
         # Setup mocks
@@ -186,8 +186,8 @@ class TestRegisterTools:
         # Verify no other operations were performed
         mock_client.tools.upsert_from_function.assert_not_called()
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_with_specific_tools(self, mock_letta_class, mock_get_letta_config):
         """Test registering specific tools only."""
         # Setup mocks
@@ -226,8 +226,8 @@ class TestRegisterTools:
         assert mock_client.tools.upsert_from_function.call_count == 1
         assert mock_client.agents.tools.attach.call_count == 1
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_with_unknown_tools(self, mock_letta_class, mock_get_letta_config):
         """Test registering with unknown tool names."""
         # Setup mocks
@@ -254,8 +254,8 @@ class TestRegisterTools:
         mock_client.tools.upsert_from_function.assert_not_called()
         mock_client.agents.tools.attach.assert_not_called()
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_tool_already_attached(self, mock_letta_class, mock_get_letta_config):
         """Test handling when tool is already attached."""
         # Setup mocks
@@ -293,8 +293,8 @@ class TestRegisterTools:
         assert mock_client.tools.upsert_from_function.call_count > 0
         mock_client.agents.tools.attach.assert_not_called()
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_tool_creation_failure(self, mock_letta_class, mock_get_letta_config):
         """Test handling tool creation failure."""
         # Setup mocks
@@ -329,8 +329,8 @@ class TestRegisterTools:
         # Verify no attachments were attempted
         mock_client.agents.tools.attach.assert_not_called()
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_attachment_failure(self, mock_letta_class, mock_get_letta_config):
         """Test handling tool attachment failure."""
         # Setup mocks
@@ -371,8 +371,8 @@ class TestRegisterTools:
         # Verify attachment was attempted
         assert mock_client.agents.tools.attach.call_count > 0
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.Letta')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.Letta')
     def test_register_tools_fatal_error(self, mock_letta_class, mock_get_letta_config):
         """Test handling fatal errors."""
         # Setup mocks
@@ -502,14 +502,14 @@ class TestRegisterTools:
 class TestRegisterToolsCLI:
     """Test cases for register_tools CLI functionality."""
     
-    @patch('register_tools.register_tools')
+    @patch('scripts.register_tools.register_tools')
     def test_cli_list_tools(self, mock_register_tools):
         """Test CLI list functionality."""
         import sys
         
         try:
             # Simulate CLI call
-            import register_tools
+            import scripts.register_tools
             sys.argv = ['register_tools.py', '--list']
             # Execute the CLI code directly
             import argparse
@@ -522,21 +522,21 @@ class TestRegisterToolsCLI:
             args = parser.parse_args(['--list'])
             
             if args.list:
-                register_tools.list_available_tools()
+                scripts.register_tools.list_available_tools()
             else:
                 # Use config default if no agent specified
-                letta_config = register_tools.get_letta_config()
+                letta_config = scripts.register_tools.get_letta_config()
                 agent_id = args.agent_id if args.agent_id else letta_config['agent_id']
-                register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
-                register_tools.register_tools(agent_id, args.tools)
+                scripts.register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
+                scripts.register_tools.register_tools(agent_id, args.tools)
         except SystemExit:
             pass
         
         # Verify list_available_tools was called (implicitly through the function)
         # The actual verification is that no exception was raised
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.register_tools')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.register_tools')
     def test_cli_register_tools_default(self, mock_register_tools, mock_get_letta_config):
         """Test CLI register tools with default agent."""
         import sys
@@ -550,7 +550,7 @@ class TestRegisterToolsCLI:
         
         try:
             # Simulate CLI call
-            import register_tools
+            import scripts.register_tools
             sys.argv = ['register_tools.py']
             # Execute the CLI code directly
             import argparse
@@ -563,21 +563,21 @@ class TestRegisterToolsCLI:
             args = parser.parse_args([])
             
             if args.list:
-                register_tools.list_available_tools()
+                scripts.register_tools.list_available_tools()
             else:
                 # Use config default if no agent specified
-                letta_config = register_tools.get_letta_config()
+                letta_config = scripts.register_tools.get_letta_config()
                 agent_id = args.agent_id if args.agent_id else letta_config['agent_id']
-                register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
-                register_tools.register_tools(agent_id, args.tools)
+                scripts.register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
+                scripts.register_tools.register_tools(agent_id, args.tools)
         except SystemExit:
             pass
         
         # Verify register_tools was called with config agent ID
         mock_register_tools.assert_called_once_with('test-agent-id', None)
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.register_tools')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.register_tools')
     def test_cli_register_tools_with_agent_id(self, mock_register_tools, mock_get_letta_config):
         """Test CLI register tools with custom agent ID."""
         import sys
@@ -591,7 +591,7 @@ class TestRegisterToolsCLI:
         
         try:
             # Simulate CLI call
-            import register_tools
+            import scripts.register_tools
             sys.argv = ['register_tools.py', '--agent-id', 'custom-agent-id']
             # Execute the CLI code directly
             import argparse
@@ -604,21 +604,21 @@ class TestRegisterToolsCLI:
             args = parser.parse_args(['--agent-id', 'custom-agent-id'])
             
             if args.list:
-                register_tools.list_available_tools()
+                scripts.register_tools.list_available_tools()
             else:
                 # Use config default if no agent specified
-                letta_config = register_tools.get_letta_config()
+                letta_config = scripts.register_tools.get_letta_config()
                 agent_id = args.agent_id if args.agent_id else letta_config['agent_id']
-                register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
-                register_tools.register_tools(agent_id, args.tools)
+                scripts.register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
+                scripts.register_tools.register_tools(agent_id, args.tools)
         except SystemExit:
             pass
         
         # Verify register_tools was called with custom agent ID
         mock_register_tools.assert_called_once_with('custom-agent-id', None)
     
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.register_tools')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.register_tools')
     def test_cli_register_tools_with_specific_tools(self, mock_register_tools, mock_get_letta_config):
         """Test CLI register tools with specific tools."""
         import sys
@@ -632,7 +632,7 @@ class TestRegisterToolsCLI:
         
         try:
             # Simulate CLI call
-            import register_tools
+            import scripts.register_tools
             sys.argv = ['register_tools.py', '--tools', 'halt_activity', 'ignore_notification']
             # Execute the CLI code directly
             import argparse
@@ -645,13 +645,13 @@ class TestRegisterToolsCLI:
             args = parser.parse_args(['--tools', 'halt_activity', 'ignore_notification'])
             
             if args.list:
-                register_tools.list_available_tools()
+                scripts.register_tools.list_available_tools()
             else:
                 # Use config default if no agent specified
-                letta_config = register_tools.get_letta_config()
+                letta_config = scripts.register_tools.get_letta_config()
                 agent_id = args.agent_id if args.agent_id else letta_config['agent_id']
-                register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
-                register_tools.register_tools(agent_id, args.tools)
+                scripts.register_tools.console.print(f"\n[bold]Registering tools for agent: {agent_id}[/bold]\n")
+                scripts.register_tools.register_tools(agent_id, args.tools)
         except SystemExit:
             pass
         
@@ -698,8 +698,8 @@ class TestRegisterToolsCLI:
         assert 'Available Void Tools' in output
         assert 'halt_activity' in output
 
-    @patch('register_tools.get_letta_config')
-    @patch('register_tools.register_tools')
+    @patch('scripts.register_tools.get_letta_config')
+    @patch('scripts.register_tools.register_tools')
     def test_cli_main_block_execution_with_tools(self, mock_register_tools, mock_get_letta_config):
         """Test actual CLI main block execution with tools argument."""
         # Mock the config
@@ -749,37 +749,37 @@ class TestRegisterToolsCLI:
 
     def test_cli_main_function_list(self):
         """Test CLI main function with --list argument."""
-        import register_tools
+        import scripts.register_tools
         from unittest.mock import patch
         
-        with patch('register_tools.list_available_tools') as mock_list_tools:
+        with patch('scripts.register_tools.list_available_tools') as mock_list_tools:
             with patch('sys.argv', ['register_tools.py', '--list']):
-                register_tools.main()
+                scripts.register_tools.main()
             
             mock_list_tools.assert_called_once()
 
     def test_cli_main_function_register(self):
         """Test CLI main function with registration."""
-        import register_tools
+        import scripts.register_tools
         from unittest.mock import patch
         
-        with patch('register_tools.register_tools') as mock_register_tools, \
-             patch('register_tools.get_letta_config', return_value={'agent_id': 'test-agent-id'}):
+        with patch('scripts.register_tools.register_tools') as mock_register_tools, \
+             patch('scripts.register_tools.get_letta_config', return_value={'agent_id': 'test-agent-id'}):
             
             with patch('sys.argv', ['register_tools.py', '--agent-id', 'test-agent', '--tools', 'halt_activity']):
-                register_tools.main()
+                scripts.register_tools.main()
             
             mock_register_tools.assert_called_once_with('test-agent', ['halt_activity'])
 
     def test_cli_main_function_register_default_agent(self):
         """Test CLI main function with default agent from config."""
-        import register_tools
+        import scripts.register_tools
         from unittest.mock import patch
         
-        with patch('register_tools.register_tools') as mock_register_tools, \
-             patch('register_tools.get_letta_config', return_value={'agent_id': 'default-agent'}):
+        with patch('scripts.register_tools.register_tools') as mock_register_tools, \
+             patch('scripts.register_tools.get_letta_config', return_value={'agent_id': 'default-agent'}):
             
             with patch('sys.argv', ['register_tools.py', '--tools', 'halt_activity']):
-                register_tools.main()
+                scripts.register_tools.main()
             
             mock_register_tools.assert_called_once_with('default-agent', ['halt_activity'])

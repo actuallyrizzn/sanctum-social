@@ -1,0 +1,17 @@
+letta:
+  api_key: "test_letta_key"
+  agent_id: "test_agent_id"
+  timeout: 30
+  base_url: "https://api.letta.ai"
+
+x:
+  api_key: "test_x_api_key"
+  user_id: "test_x_user_id"
+  consumer_key: "test_consumer_key"
+  consumer_secret: "test_consumer_secret"
+  access_token: "test_access_token"
+  access_token_secret: "test_access_token_secret"
+
+bot:
+  agent:
+    name: "test_agent"

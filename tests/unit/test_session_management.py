@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch, mock_open
 from typing import Dict, Any
 
 # Import the functions we're testing
-from bsky_utils import (
+from platforms.bluesky.utils import (
     get_session_config,
     get_session_path,
     validate_session,
@@ -29,7 +29,7 @@ class TestSessionConfig:
     
     def test_get_session_config_defaults(self):
         """Test default configuration when no config file exists."""
-        with patch('config_loader.get_config', side_effect=Exception("No config")):
+        with patch('core.config.get_config', side_effect=Exception("No config")):
             config = get_session_config()
             
             assert config['directory'] == 'sessions'
@@ -50,7 +50,7 @@ class TestSessionConfig:
             }
         }
         
-        with patch('config_loader.get_config', return_value=mock_config):
+        with patch('core.config.get_config', return_value=mock_config):
             config = get_session_config()
             
             assert config['directory'] == 'custom_sessions'
@@ -154,14 +154,14 @@ class TestSessionRetryLogic:
         session_file = temp_dir / 'session_test_user.txt'
         session_file.write_text(session_data)
         
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
             result = get_session_with_retry('test_user', session_dir=str(temp_dir))
             
             assert result == session_data
     
     def test_get_session_with_retry_file_not_found(self, temp_dir):
         """Test session retrieval when file doesn't exist."""
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
             result = get_session_with_retry('nonexistent_user', session_dir=str(temp_dir))
             
             assert result is None
@@ -171,7 +171,7 @@ class TestSessionRetryLogic:
         session_file = temp_dir / 'session_test_user.txt'
         session_file.write_text('test_data')
         
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
             with patch('builtins.open', side_effect=PermissionError("Permission denied")):
                 result = get_session_with_retry('test_user', session_dir=str(temp_dir))
                 
@@ -186,7 +186,7 @@ class TestSessionRetryLogic:
             'did': 'did:plc:test123'
         })
         
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
             result = save_session_with_retry('test_user', session_data, session_dir=str(temp_dir))
             
             assert result == True
@@ -205,7 +205,7 @@ class TestSessionRetryLogic:
             'did': 'did:plc:test123'
         })
         
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
             with patch('builtins.open', side_effect=PermissionError("Permission denied")):
                 result = save_session_with_retry('test_user', session_data, session_dir=str(temp_dir))
                 
@@ -215,7 +215,7 @@ class TestSessionRetryLogic:
         """Test session saving with invalid session data."""
         invalid_session = "invalid session data"
         
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 3, 'validate_sessions': True}):
             result = save_session_with_retry('test_user', invalid_session, session_dir=str(temp_dir))
             
             assert result == False
@@ -226,7 +226,7 @@ class TestSessionCleanup:
     
     def test_cleanup_old_sessions_no_files(self, temp_dir):
         """Test cleanup when no session files exist."""
-        with patch('bsky_utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
             cleaned = cleanup_old_sessions(session_dir=str(temp_dir))
             
             assert cleaned == 0
@@ -242,7 +242,7 @@ class TestSessionCleanup:
         old_time = time.time() - (31 * 24 * 60 * 60)  # 31 days ago
         os.utime(old_session, (old_time, old_time))
         
-        with patch('bsky_utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
             cleaned = cleanup_old_sessions(session_dir=str(temp_dir))
             
             assert cleaned == 1
@@ -260,7 +260,7 @@ class TestSessionCleanup:
         })
         recent_session.write_text(valid_session)
         
-        with patch('bsky_utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
             cleaned = cleanup_old_sessions(session_dir=str(temp_dir))
             
             assert cleaned == 0
@@ -272,7 +272,7 @@ class TestSessionCleanup:
         corrupted_session = temp_dir / 'session_corrupted_user.txt'
         corrupted_session.write_text('corrupted_data')
         
-        with patch('bsky_utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
             cleaned = cleanup_old_sessions(session_dir=str(temp_dir))
             
             assert cleaned == 1
@@ -301,7 +301,7 @@ class TestSessionCleanup:
         corrupted_session = temp_dir / 'session_corrupted_user.txt'
         corrupted_session.write_text('corrupted_data')
         
-        with patch('bsky_utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
             cleaned = cleanup_old_sessions(session_dir=str(temp_dir))
             
             assert cleaned == 2  # Old + corrupted
@@ -325,14 +325,14 @@ class TestLegacySessionFunctions:
         session_file = temp_dir / 'session_test_user.txt'
         session_file.write_text(session_data)
         
-        with patch('bsky_utils.get_session_with_retry', return_value=session_data):
+        with patch('platforms.bluesky.utils.get_session_with_retry', return_value=session_data):
             result = get_session('test_user')
             
             assert result == session_data
     
     def test_get_session_legacy_error(self, temp_dir):
         """Test legacy get_session function with error."""
-        with patch('bsky_utils.get_session_with_retry', side_effect=Exception("Test error")):
+        with patch('platforms.bluesky.utils.get_session_with_retry', side_effect=Exception("Test error")):
             with patch('os.getcwd', return_value=str(temp_dir)):
                 # Create a file to test fallback
                 session_file = temp_dir / 'session_test_user.txt'
@@ -350,7 +350,7 @@ class TestLegacySessionFunctions:
             'did': 'did:plc:test123'
         })
         
-        with patch('bsky_utils.save_session_with_retry', return_value=True):
+        with patch('platforms.bluesky.utils.save_session_with_retry', return_value=True):
             # Should not raise exception
             save_session('test_user', session_data)
     
@@ -358,7 +358,7 @@ class TestLegacySessionFunctions:
         """Test legacy save_session function with failure."""
         session_data = 'test_data'
         
-        with patch('bsky_utils.save_session_with_retry', return_value=False):
+        with patch('platforms.bluesky.utils.save_session_with_retry', return_value=False):
             with patch('os.getcwd', return_value=str(temp_dir)):
                 # Should not raise exception because legacy fallback will work
                 save_session('test_user', session_data)
@@ -381,13 +381,13 @@ class TestSessionErrorHandling:
         })
         
         # Test OSError handling
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
             with patch('builtins.open', side_effect=OSError("Disk full")):
                 result = save_session_with_retry('test_user', session_data, session_dir=str(temp_dir))
                 assert result == False
         
         # Test UnicodeEncodeError handling
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 2, 'retry_delay': 0.1, 'validate_sessions': True}):
             with patch('builtins.open', side_effect=UnicodeEncodeError('utf-8', 'test', 0, 1, 'invalid')):
                 result = save_session_with_retry('test_user', session_data, session_dir=str(temp_dir))
                 assert result == False
@@ -398,7 +398,7 @@ class TestSessionErrorHandling:
         problematic_file = temp_dir / 'session_problematic_user.txt'
         problematic_file.write_text('test_data')
         
-        with patch('bsky_utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'max_age_days': 30, 'validate_sessions': True}):
             # Mock the Path.exists() method to raise an error
             with patch('pathlib.Path.exists', side_effect=OSError("Permission denied")):
                 cleaned = cleanup_old_sessions(session_dir=str(temp_dir))
@@ -419,7 +419,7 @@ class TestSessionIntegration:
             'did': 'did:plc:test123'
         })
         
-        with patch('bsky_utils.get_session_config', return_value={
+        with patch('platforms.bluesky.utils.get_session_config', return_value={
             'directory': str(temp_dir),
             'retry_attempts': 3,
             'validate_sessions': True,
@@ -455,7 +455,7 @@ class TestSessionIntegration:
             'did': 'did:plc:test123'
         })
         
-        with patch('bsky_utils.get_session_config', return_value={'retry_attempts': 3, 'retry_delay': 0.1, 'validate_sessions': True}):
+        with patch('platforms.bluesky.utils.get_session_config', return_value={'retry_attempts': 3, 'retry_delay': 0.1, 'validate_sessions': True}):
             with patch('time.sleep') as mock_sleep:
                 with patch('builtins.open', side_effect=OSError("Test error")):
                     result = save_session_with_retry('test_user', session_data, session_dir=str(temp_dir))

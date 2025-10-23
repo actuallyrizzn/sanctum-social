@@ -6,7 +6,7 @@ The profiler agent is responsible for updating user memory blocks based on reque
 import os
 from dotenv import load_dotenv
 from letta import Client
-from utils import create_agent_if_not_exists, upsert_block
+from utils.utils import create_agent_if_not_exists, upsert_block
 
 load_dotenv()
 

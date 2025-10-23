@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from tools.post import PostArgs, create_new_bluesky_post
+from platforms.bluesky.tools.post import PostArgs, create_new_bluesky_post
 
 
 class TestPostArgs:

@@ -21,8 +21,8 @@ from datetime import datetime
 from collections import defaultdict
 
 # Import the module under test
-import bsky
-from bsky import (
+import platforms.bluesky.orchestrator as bsky
+from platforms.bluesky.orchestrator import (
     extract_handles_from_data,
     log_with_panel,
     initialize_void,
@@ -161,9 +161,9 @@ class TestBlueskyUtilityFunctions:
 class TestBlueskyInitialization:
     """Test Bluesky initialization functions."""
     
-    @patch('bsky.get_letta_config')
-    @patch('bsky.Letta')
-    @patch('bsky.upsert_agent')
+    @patch('platforms.bluesky.orchestrator.get_letta_config')
+    @patch('platforms.bluesky.orchestrator.Letta')
+    @patch('platforms.bluesky.orchestrator.upsert_agent')
     def test_initialize_void_success(self, mock_upsert_agent, mock_letta_class, mock_get_config):
         """Test successful void agent initialization."""
         # Setup mocks
@@ -194,8 +194,8 @@ class TestBlueskyInitialization:
         mock_client.agents.retrieve.assert_called_once_with(agent_id='test_agent_id')
         # upsert_agent is only called if agent retrieval fails, which doesn't happen in this test
     
-    @patch('bsky.get_letta_config')
-    @patch('bsky.Letta')
+    @patch('platforms.bluesky.orchestrator.get_letta_config')
+    @patch('platforms.bluesky.orchestrator.Letta')
     def test_initialize_void_config_error(self, mock_letta_class, mock_get_config):
         """Test void initialization with configuration error."""
         mock_get_config.side_effect = Exception("Config error")
@@ -203,8 +203,8 @@ class TestBlueskyInitialization:
         with pytest.raises(Exception, match="Config error"):
             initialize_void()
     
-    @patch('bsky.get_letta_config')
-    @patch('bsky.Letta')
+    @patch('platforms.bluesky.orchestrator.get_letta_config')
+    @patch('platforms.bluesky.orchestrator.Letta')
     def test_initialize_void_client_error(self, mock_letta_class, mock_get_config):
         """Test void initialization with client error."""
         mock_config = {
@@ -228,14 +228,14 @@ class TestBlueskyQueueOperations:
         mock_db = MagicMock()
         mock_db.get_processed_uris.return_value = {"123456789", "987654321"}
         
-        with patch('bsky.NOTIFICATION_DB', mock_db):
+        with patch('platforms.bluesky.orchestrator.NOTIFICATION_DB', mock_db):
             processed = load_processed_notifications()
             assert processed == {"123456789", "987654321"}
     
     def test_load_processed_notifications_file_not_found(self):
         """Test processed notifications loading with missing file."""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('bsky.PROCESSED_NOTIFICATIONS_FILE', Path("nonexistent.json")):
+            with patch('platforms.bluesky.orchestrator.PROCESSED_NOTIFICATIONS_FILE', Path("nonexistent.json")):
                 processed = load_processed_notifications()
                 assert processed == set()
     
@@ -265,9 +265,9 @@ class TestBlueskyQueueOperations:
         }
         
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('bsky.QUEUE_DIR', Path("test_queue")):
+            with patch('platforms.bluesky.orchestrator.QUEUE_DIR', Path("test_queue")):
                 with patch('pathlib.Path.mkdir'):
-                    with patch('bsky.hashlib.md5') as mock_md5:
+                    with patch('platforms.bluesky.orchestrator.hashlib.md5') as mock_md5:
                         mock_md5.return_value.hexdigest.return_value = "test_hash"
                         save_notification_to_queue(notification)
                         
@@ -282,9 +282,9 @@ class TestBlueskyQueueOperations:
         }
         
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('bsky.QUEUE_DIR', Path("test_queue")):
+            with patch('platforms.bluesky.orchestrator.QUEUE_DIR', Path("test_queue")):
                 with patch('pathlib.Path.mkdir'):
-                    with patch('bsky.hashlib.md5') as mock_md5:
+                    with patch('platforms.bluesky.orchestrator.hashlib.md5') as mock_md5:
                         mock_md5.return_value.hexdigest.return_value = "priority_hash"
                         save_notification_to_queue(notification, is_priority=True)
                         
@@ -295,8 +295,8 @@ class TestBlueskyQueueOperations:
 class TestBlueskyNotificationProcessing:
     """Test Bluesky notification processing."""
     
-    @patch('bsky.attach_user_blocks')
-    @patch('bsky.thread_to_yaml_string')
+    @patch('platforms.bluesky.orchestrator.attach_user_blocks')
+    @patch('platforms.bluesky.orchestrator.thread_to_yaml_string')
     def test_process_mention_success(self, mock_thread_to_yaml, mock_attach_blocks):
         """Test successful mention processing."""
         # Setup mocks
@@ -326,7 +326,7 @@ class TestBlueskyNotificationProcessing:
         assert result is not None
         mock_thread_to_yaml.assert_called_once()
     
-    @patch('bsky.attach_user_blocks')
+    @patch('platforms.bluesky.orchestrator.attach_user_blocks')
     def test_process_mention_with_user_blocks(self, mock_attach_blocks):
         """Test mention processing with user block attachment."""
         mock_void_agent = MagicMock()
@@ -368,9 +368,9 @@ class TestBlueskyNotificationProcessing:
 class TestBlueskyQueueProcessing:
     """Test Bluesky queue processing functions."""
     
-    @patch('bsky.process_mention')
-    @patch('bsky.load_processed_notifications')
-    @patch('bsky.save_processed_notifications')
+    @patch('platforms.bluesky.orchestrator.process_mention')
+    @patch('platforms.bluesky.orchestrator.load_processed_notifications')
+    @patch('platforms.bluesky.orchestrator.save_processed_notifications')
     def test_load_and_process_queued_notifications_success(self, mock_save_processed, mock_load_processed, mock_process_mention):
         """Test successful queued notifications processing."""
         # Setup mocks
@@ -403,7 +403,7 @@ class TestBlueskyQueueProcessing:
                     
                     mock_process_mention.assert_called_once()
     
-    @patch('bsky.save_notification_to_queue')
+    @patch('platforms.bluesky.orchestrator.save_notification_to_queue')
     def test_fetch_and_queue_new_notifications_success(self, mock_save_to_queue):
         """Test successful new notifications fetching and queuing."""
         mock_atproto_client = MagicMock()
@@ -433,8 +433,8 @@ class TestBlueskyQueueProcessing:
         assert result is not None
         mock_save_to_queue.assert_called_once()
     
-    @patch('bsky.load_and_process_queued_notifications')
-    @patch('bsky.fetch_and_queue_new_notifications')
+    @patch('platforms.bluesky.orchestrator.load_and_process_queued_notifications')
+    @patch('platforms.bluesky.orchestrator.fetch_and_queue_new_notifications')
     def test_process_notifications_success(self, mock_fetch_notifications, mock_process_queued):
         """Test successful notifications processing workflow."""
         mock_void_agent = MagicMock()
@@ -453,7 +453,7 @@ class TestBlueskyQueueProcessing:
 class TestBlueskyMemoryManagement:
     """Test Bluesky memory management functions."""
     
-    @patch('bsky.Letta')
+    @patch('platforms.bluesky.orchestrator.Letta')
     def test_send_synthesis_message_success(self, mock_letta_class):
         """Test successful synthesis message sending."""
         mock_client = MagicMock()
@@ -468,7 +468,7 @@ class TestBlueskyMemoryManagement:
         
         # Just verify the function was called successfully (no exceptions)
     
-    @patch('bsky.Letta')
+    @patch('platforms.bluesky.orchestrator.Letta')
     def test_periodic_user_block_cleanup_success(self, mock_letta_class):
         """Test successful periodic user block cleanup."""
         mock_client = MagicMock()
@@ -485,7 +485,7 @@ class TestBlueskyMemoryManagement:
         
         mock_client.agents.blocks.list.assert_called_once_with(agent_id='test_agent_id')
     
-    @patch('bsky.Letta')
+    @patch('platforms.bluesky.orchestrator.Letta')
     def test_attach_temporal_blocks_success(self, mock_letta_class):
         """Test successful temporal blocks attachment."""
         mock_client = MagicMock()
@@ -500,7 +500,7 @@ class TestBlueskyMemoryManagement:
         assert result is not None
         mock_client.agents.blocks.attach.assert_called()
     
-    @patch('bsky.Letta')
+    @patch('platforms.bluesky.orchestrator.Letta')
     def test_detach_temporal_blocks_success(self, mock_letta_class):
         """Test successful temporal blocks detachment."""
         mock_client = MagicMock()
@@ -537,7 +537,7 @@ class TestBlueskyErrorHandling:
         result = process_mention(mock_void_agent, mock_atproto_client, invalid_notification)
         assert result is not None
     
-    @patch('bsky.load_processed_notifications')
+    @patch('platforms.bluesky.orchestrator.load_processed_notifications')
     def test_load_and_process_queued_notifications_no_files(self, mock_load_processed):
         """Test queued notifications processing with no files."""
         mock_load_processed.return_value = set()
@@ -549,7 +549,7 @@ class TestBlueskyErrorHandling:
             load_and_process_queued_notifications(mock_void_agent, mock_atproto_client)
             # Just verify the function was called successfully (no exceptions)
     
-    @patch('bsky.save_notification_to_queue')
+    @patch('platforms.bluesky.orchestrator.save_notification_to_queue')
     def test_fetch_and_queue_new_notifications_api_error(self, mock_save_to_queue):
         """Test notifications fetching with API error."""
         mock_atproto_client = MagicMock()
@@ -572,8 +572,8 @@ class TestBlueskyErrorHandling:
 class TestBlueskyIntegration:
     """Test Bluesky integration scenarios."""
     
-    @patch('bsky.initialize_void')
-    @patch('bsky.process_notifications')
+    @patch('platforms.bluesky.orchestrator.initialize_void')
+    @patch('platforms.bluesky.orchestrator.process_notifications')
     def test_bluesky_integration_workflow(self, mock_process_notifications, mock_initialize_void):
         """Test complete Bluesky integration workflow."""
         # Setup mocks
@@ -606,7 +606,7 @@ class TestBlueskyIntegration:
             }
         }
         
-        with patch('bsky.get_letta_config', return_value=test_config):
+        with patch('platforms.bluesky.orchestrator.get_letta_config', return_value=test_config):
             # Test that configuration is properly loaded
             config = bsky.get_letta_config()
             assert config['letta']['api_key'] == 'test_letta_key'
@@ -620,9 +620,9 @@ class TestBlueskyIntegration:
             'record': {'text': 'Test notification'}
         }
         
-        with patch('bsky.save_notification_to_queue') as mock_save:
-            with patch('bsky.load_processed_notifications', return_value=set()):
-                with patch('bsky.save_processed_notifications') as mock_save_processed:
+        with patch('platforms.bluesky.orchestrator.save_notification_to_queue') as mock_save:
+            with patch('platforms.bluesky.orchestrator.load_processed_notifications', return_value=set()):
+                with patch('platforms.bluesky.orchestrator.save_processed_notifications') as mock_save_processed:
                     # Simulate queue workflow - just verify the function exists and can be called
                     mock_save.return_value = True
                     result = mock_save(test_notification)
@@ -634,8 +634,8 @@ class TestBlueskyIntegration:
         """Test Bluesky memory management integration."""
         mock_client = MagicMock()
         
-        with patch('bsky.attach_temporal_blocks') as mock_attach:
-            with patch('bsky.detach_temporal_blocks') as mock_detach:
+        with patch('platforms.bluesky.orchestrator.attach_temporal_blocks') as mock_attach:
+            with patch('platforms.bluesky.orchestrator.detach_temporal_blocks') as mock_detach:
                 # Test memory block lifecycle - call the mocked functions
                 mock_attach.return_value = (True, ['test_block'])
                 mock_detach.return_value = True

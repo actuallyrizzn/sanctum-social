@@ -3,7 +3,7 @@
 import logging
 from typing import List, Set
 from letta_client import Letta
-from config_loader import get_letta_config, get_agent_config
+from core.config import get_letta_config, get_agent_config
 
 logger = logging.getLogger(__name__)
 

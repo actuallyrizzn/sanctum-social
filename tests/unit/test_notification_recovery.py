@@ -10,7 +10,7 @@ import tempfile
 import shutil
 
 # Mock the config loading before importing notification_recovery
-with patch('config_loader.get_config') as mock_get_config:
+with patch('core.config.get_config') as mock_get_config:
     mock_loader = mock_get_config.return_value
     mock_loader.get_required.side_effect = lambda key: {
         'letta.api_key': 'test-api-key',
@@ -21,7 +21,7 @@ with patch('config_loader.get_config') as mock_get_config:
         'letta.base_url': None
     }.get(key, default)
     
-    from notification_recovery import (
+    from utils.notification_recovery import (
         recover_notifications,
         check_database_health,
         reset_notification_status
@@ -31,10 +31,10 @@ with patch('config_loader.get_config') as mock_get_config:
 class TestNotificationRecovery:
     """Test cases for notification_recovery module."""
 
-    @patch('notification_recovery.bsky_utils.default_login')
-    @patch('notification_recovery.NotificationDB')
-    @patch('notification_recovery.save_notification_to_queue')
-    @patch('notification_recovery.notification_to_dict')
+    @patch('utils.notification_recovery.bsky_utils.default_login')
+    @patch('utils.notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.save_notification_to_queue')
+    @patch('utils.notification_recovery.notification_to_dict')
     def test_recover_notifications_dry_run(self, mock_notification_to_dict, mock_save_to_queue, 
                                          mock_notification_db, mock_default_login):
         """Test recover_notifications in dry run mode."""
@@ -80,10 +80,10 @@ class TestNotificationRecovery:
         # Should return count of notifications that would be recovered
         assert result == 1
 
-    @patch('notification_recovery.bsky_utils.default_login')
-    @patch('notification_recovery.NotificationDB')
-    @patch('notification_recovery.save_notification_to_queue')
-    @patch('notification_recovery.notification_to_dict')
+    @patch('utils.notification_recovery.bsky_utils.default_login')
+    @patch('utils.notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.save_notification_to_queue')
+    @patch('utils.notification_recovery.notification_to_dict')
     def test_recover_notifications_execute_mode(self, mock_notification_to_dict, mock_save_to_queue,
                                              mock_notification_db, mock_default_login):
         """Test recover_notifications in execute mode."""
@@ -125,9 +125,9 @@ class TestNotificationRecovery:
         # Should return count of recovered notifications
         assert result == 1
 
-    @patch('notification_recovery.bsky_utils.default_login')
-    @patch('notification_recovery.NotificationDB')
-    @patch('notification_recovery.notification_to_dict')
+    @patch('utils.notification_recovery.bsky_utils.default_login')
+    @patch('utils.notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.notification_to_dict')
     def test_recover_notifications_skip_likes(self, mock_notification_to_dict, mock_notification_db, mock_default_login):
         """Test that likes are skipped during recovery."""
         # Setup mocks
@@ -156,9 +156,9 @@ class TestNotificationRecovery:
         assert result == 0
         mock_notification_to_dict.assert_not_called()
 
-    @patch('notification_recovery.bsky_utils.default_login')
-    @patch('notification_recovery.NotificationDB')
-    @patch('notification_recovery.notification_to_dict')
+    @patch('utils.notification_recovery.bsky_utils.default_login')
+    @patch('utils.notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.notification_to_dict')
     def test_recover_notifications_already_processed(self, mock_notification_to_dict, mock_notification_db, mock_default_login):
         """Test that already processed notifications are skipped."""
         # Setup mocks
@@ -194,8 +194,8 @@ class TestNotificationRecovery:
         # Should skip already processed notifications
         assert result == 0
 
-    @patch('notification_recovery.bsky_utils.default_login')
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.bsky_utils.default_login')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_recover_notifications_api_error(self, mock_notification_db, mock_default_login):
         """Test handling of API errors during recovery."""
         # Setup mocks
@@ -215,7 +215,7 @@ class TestNotificationRecovery:
         # Should handle error gracefully
         assert result == 0
 
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_check_database_health(self, mock_notification_db):
         """Test database health check."""
         # Setup mock
@@ -245,7 +245,7 @@ class TestNotificationRecovery:
         # Should return stats
         assert result == mock_stats
 
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_check_database_health_high_pending_warning(self, mock_notification_db):
         """Test database health check with high pending notifications."""
         # Setup mock
@@ -271,7 +271,7 @@ class TestNotificationRecovery:
         # Should return stats
         assert result == mock_stats
 
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_check_database_health_high_error_warning(self, mock_notification_db):
         """Test database health check with high error notifications."""
         # Setup mock
@@ -297,7 +297,7 @@ class TestNotificationRecovery:
         # Should return stats
         assert result == mock_stats
 
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_reset_notification_status_dry_run(self, mock_notification_db):
         """Test reset_notification_status in dry run mode."""
         # Setup mock
@@ -327,7 +327,7 @@ class TestNotificationRecovery:
         # Should return count of notifications that would be reset
         assert result == 1
 
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_reset_notification_status_execute_mode(self, mock_notification_db):
         """Test reset_notification_status in execute mode."""
         # Setup mock
@@ -363,7 +363,7 @@ class TestNotificationRecovery:
         # Should return count of reset notifications
         assert result == 1
 
-    @patch('notification_recovery.NotificationDB')
+    @patch('utils.notification_recovery.NotificationDB')
     def test_reset_notification_status_no_notifications(self, mock_notification_db):
         """Test reset_notification_status when no notifications need reset."""
         # Setup mock
@@ -382,7 +382,7 @@ class TestNotificationRecovery:
         # Should return 0
         assert result == 0
 
-    @patch('notification_recovery.recover_notifications')
+    @patch('utils.notification_recovery.recover_notifications')
     def test_cli_main_recover_command(self, mock_recover_notifications):
         """Test CLI main function with recover command."""
         import sys
@@ -437,7 +437,7 @@ class TestNotificationRecovery:
         # Verify the function was called with correct parameters
         mock_recover_notifications.assert_called_once_with(hours=12, dry_run=True)
 
-    @patch('notification_recovery.check_database_health')
+    @patch('utils.notification_recovery.check_database_health')
     def test_cli_main_health_command(self, mock_check_database_health):
         """Test CLI main function with health command."""
         import sys
@@ -492,7 +492,7 @@ class TestNotificationRecovery:
         # Verify the function was called
         mock_check_database_health.assert_called_once()
 
-    @patch('notification_recovery.reset_notification_status')
+    @patch('utils.notification_recovery.reset_notification_status')
     def test_cli_main_reset_command(self, mock_reset_notification_status):
         """Test CLI main function with reset command."""
         import sys
@@ -603,13 +603,13 @@ class TestNotificationRecovery:
 
     def test_cli_main_function_recover_with_execute(self):
         """Test CLI main function with recover command and execute flag."""
-        import notification_recovery
+        import utils.notification_recovery
         from unittest.mock import patch
         
-        with patch('notification_recovery.recover_notifications') as mock_recover:
+        with patch('utils.notification_recovery.recover_notifications') as mock_recover:
             with patch('sys.argv', ['notification_recovery.py', 'recover', '--hours', '12', '--execute']):
                 try:
-                    notification_recovery.main()
+                    utils.notification_recovery.main()
                 except SystemExit:
                     pass
             
@@ -617,13 +617,13 @@ class TestNotificationRecovery:
 
     def test_cli_main_function_health(self):
         """Test CLI main function with health command."""
-        import notification_recovery
+        import utils.notification_recovery
         from unittest.mock import patch
         
-        with patch('notification_recovery.check_database_health') as mock_health:
+        with patch('utils.notification_recovery.check_database_health') as mock_health:
             with patch('sys.argv', ['notification_recovery.py', 'health']):
                 try:
-                    notification_recovery.main()
+                    utils.notification_recovery.main()
                 except SystemExit:
                     pass
             
@@ -631,13 +631,13 @@ class TestNotificationRecovery:
 
     def test_cli_main_function_reset_with_execute(self):
         """Test CLI main function with reset command and execute flag."""
-        import notification_recovery
+        import utils.notification_recovery
         from unittest.mock import patch
         
-        with patch('notification_recovery.reset_notification_status') as mock_reset:
+        with patch('utils.notification_recovery.reset_notification_status') as mock_reset:
             with patch('sys.argv', ['notification_recovery.py', 'reset', '--hours', '2', '--execute']):
                 try:
-                    notification_recovery.main()
+                    utils.notification_recovery.main()
                 except SystemExit:
                     pass
             
@@ -645,13 +645,13 @@ class TestNotificationRecovery:
 
     def test_cli_main_function_no_command(self):
         """Test CLI main function with no command (should print help)."""
-        import notification_recovery
+        import utils.notification_recovery
         from unittest.mock import patch
         
-        with patch('notification_recovery.argparse.ArgumentParser.print_help') as mock_help:
+        with patch('utils.notification_recovery.argparse.ArgumentParser.print_help') as mock_help:
             with patch('sys.argv', ['notification_recovery.py']):
                 try:
-                    notification_recovery.main()
+                    utils.notification_recovery.main()
                 except SystemExit:
                     pass
             

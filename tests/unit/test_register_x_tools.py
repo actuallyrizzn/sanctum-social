@@ -15,8 +15,8 @@ from unittest.mock import patch, MagicMock
 from typing import List
 
 # Import the module under test
-import register_x_tools
-from register_x_tools import (
+import scripts.register_x_tools
+from scripts.register_x_tools import (
     register_x_tools,
     list_available_x_tools,
     X_TOOL_CONFIGS
@@ -26,8 +26,8 @@ from register_x_tools import (
 class TestXToolRegistration:
     """Test X tool registration functionality."""
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_success(self, mock_letta_class, mock_get_config):
         """Test successful X tool registration."""
         # Setup mocks
@@ -65,8 +65,8 @@ class TestXToolRegistration:
         assert mock_client.tools.upsert_from_function.call_count > 0
         assert mock_client.agents.tools.attach.call_count > 0
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_with_custom_agent_id(self, mock_letta_class, mock_get_config):
         """Test X tool registration with custom agent ID."""
         mock_config = {
@@ -98,8 +98,8 @@ class TestXToolRegistration:
         # Verify custom agent ID was used
         mock_client.agents.retrieve.assert_called_once_with(agent_id='custom_agent_id')
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_with_specific_tools(self, mock_letta_class, mock_get_config):
         """Test X tool registration with specific tools only."""
         mock_config = {
@@ -131,8 +131,8 @@ class TestXToolRegistration:
         # Verify only specific tools were registered
         assert mock_client.tools.upsert_from_function.call_count == 2
     
-    @patch('x.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('platforms.x.orchestrator.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_agent_not_found(self, mock_letta_class, mock_get_config):
         """Test X tool registration with non-existent agent."""
         mock_config = {
@@ -152,8 +152,8 @@ class TestXToolRegistration:
         # Verify error handling (actual call uses config file agent_id)
         mock_client.agents.retrieve.assert_called_once_with(agent_id='test_agent_id')
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_tool_already_attached(self, mock_letta_class, mock_get_config):
         """Test X tool registration with already attached tools."""
         mock_config = {
@@ -197,8 +197,8 @@ class TestXToolRegistration:
         # Verify tools were attached (the current implementation doesn't check for existing tools)
         assert mock_client.agents.tools.attach.call_count == 10
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_tool_registration_error(self, mock_letta_class, mock_get_config):
         """Test X tool registration with tool registration error."""
         mock_config = {
@@ -225,7 +225,7 @@ class TestXToolRegistration:
         # Verify error handling
         mock_client.tools.upsert_from_function.assert_called()
     
-    @patch('x.get_x_letta_config')
+    @patch('platforms.x.orchestrator.get_x_letta_config')
     def test_register_x_tools_config_error(self, mock_get_config):
         """Test X tool registration with configuration error."""
         mock_get_config.side_effect = Exception("Config error")
@@ -234,7 +234,7 @@ class TestXToolRegistration:
         register_x_tools()
         
         # Note: get_x_letta_config is called at import time, so the mock doesn't affect it
-        # The function will use the config from x_config.yaml
+        # The function will use the config from config/platforms.yaml
 
 
 class TestXToolConfiguration:
@@ -293,7 +293,7 @@ class TestXToolConfiguration:
 class TestXToolListing:
     """Test X tool listing functionality."""
     
-    @patch('register_x_tools.console')
+    @patch('scripts.register_x_tools.console')
     def test_list_available_x_tools_success(self, mock_console):
         """Test successful X tool listing."""
         # Test listing
@@ -315,8 +315,8 @@ class TestXToolListing:
 class TestXToolErrorHandling:
     """Test X tool error handling and edge cases."""
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_client_initialization_error(self, mock_letta_class, mock_get_config):
         """Test X tool registration with client initialization error."""
         mock_config = {
@@ -333,8 +333,8 @@ class TestXToolErrorHandling:
         # Verify error handling
         mock_letta_class.assert_called_once()
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_register_x_tools_tool_attachment_error(self, mock_letta_class, mock_get_config):
         """Test X tool registration with tool attachment error."""
         mock_config = {
@@ -371,8 +371,8 @@ class TestXToolErrorHandling:
     
     def test_register_x_tools_with_invalid_tool_names(self):
         """Test X tool registration with invalid tool names."""
-        with patch('register_x_tools.get_x_letta_config') as mock_get_config:
-            with patch('register_x_tools.Letta') as mock_letta_class:
+        with patch('scripts.register_x_tools.get_x_letta_config') as mock_get_config:
+            with patch('scripts.register_x_tools.Letta') as mock_letta_class:
                 mock_config = {
                     'api_key': 'test_letta_key',
                     'agent_id': 'test_agent_id',
@@ -396,8 +396,8 @@ class TestXToolErrorHandling:
     
     def test_register_x_tools_with_mixed_valid_invalid_tools(self):
         """Test X tool registration with mix of valid and invalid tool names."""
-        with patch('register_x_tools.get_x_letta_config') as mock_get_config:
-            with patch('register_x_tools.Letta') as mock_letta_class:
+        with patch('scripts.register_x_tools.get_x_letta_config') as mock_get_config:
+            with patch('scripts.register_x_tools.Letta') as mock_letta_class:
                 mock_config = {
                     'api_key': 'test_letta_key',
                     'agent_id': 'test_agent_id',
@@ -431,8 +431,8 @@ class TestXToolErrorHandling:
 class TestXToolIntegration:
     """Test X tool integration scenarios."""
     
-    @patch('register_x_tools.get_x_letta_config')
-    @patch('register_x_tools.Letta')
+    @patch('scripts.register_x_tools.get_x_letta_config')
+    @patch('scripts.register_x_tools.Letta')
     def test_x_tool_registration_integration_workflow(self, mock_letta_class, mock_get_config):
         """Test complete X tool registration integration workflow."""
         # Setup mocks
@@ -495,8 +495,8 @@ class TestXToolIntegration:
     
     def test_x_tool_registration_with_base_url(self):
         """Test X tool registration with base_url configuration."""
-        with patch('x.get_x_letta_config') as mock_get_config:
-            with patch('register_x_tools.Letta') as mock_letta_class:
+        with patch('platforms.x.orchestrator.get_x_letta_config') as mock_get_config:
+            with patch('scripts.register_x_tools.Letta') as mock_letta_class:
                 mock_config = {
                     'api_key': 'test_letta_key',
                     'agent_id': 'test_agent_id',
@@ -525,8 +525,8 @@ class TestXToolIntegration:
     
     def test_x_tool_registration_without_base_url(self):
         """Test X tool registration without base_url configuration."""
-        with patch('x.get_x_letta_config') as mock_get_config:
-            with patch('register_x_tools.Letta') as mock_letta_class:
+        with patch('platforms.x.orchestrator.get_x_letta_config') as mock_get_config:
+            with patch('scripts.register_x_tools.Letta') as mock_letta_class:
                 mock_config = {
                     'api_key': 'test_letta_key',
                     'agent_id': 'test_agent_id',

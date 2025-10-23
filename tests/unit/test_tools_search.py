@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from tools.search import SearchArgs, search_bluesky_posts
+from platforms.bluesky.tools.search import SearchArgs, search_bluesky_posts
 
 
 class TestSearchArgs:

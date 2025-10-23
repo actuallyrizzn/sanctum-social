@@ -5,8 +5,8 @@ import yaml
 from datetime import datetime
 
 # Mock the dotenv loading before importing bsky_utils
-with patch('bsky_utils.dotenv.load_dotenv'):
-    from bsky_utils import (
+with patch('platforms.bluesky.utils.dotenv.load_dotenv'):
+    from platforms.bluesky.utils import (
         convert_to_basic_types,
         strip_fields,
         flatten_thread_structure,
@@ -499,7 +499,7 @@ class TestReplyToNotification:
 
 
 class TestCreateSynthesisAck:
-    @patch('config_loader.get_bluesky_config')
+    @patch('core.config.get_bluesky_config')
     def test_create_synthesis_ack_success(self, mock_get_bluesky_config):
         """Test successful synthesis acknowledgment creation."""
         # Mock bluesky config to return proper PDS URI
@@ -540,7 +540,7 @@ class TestCreateSynthesisAck:
 
 
 class TestAcknowledgePost:
-    @patch('config_loader.get_bluesky_config')
+    @patch('core.config.get_bluesky_config')
     def test_acknowledge_post_success(self, mock_get_bluesky_config):
         """Test successful post acknowledgment."""
         # Mock bluesky config to return proper PDS URI
@@ -575,7 +575,7 @@ class TestAcknowledgePost:
             assert result["cid"] == "test_cid"
             mock_post.assert_called_once()
 
-    @patch('config_loader.get_bluesky_config')
+    @patch('core.config.get_bluesky_config')
     def test_acknowledge_post_no_note(self, mock_get_bluesky_config):
         """Test post acknowledgment without note."""
         # Mock bluesky config to return proper PDS URI
@@ -625,7 +625,7 @@ class TestAcknowledgePost:
 
 
 class TestCreateToolCallRecord:
-    @patch('config_loader.get_bluesky_config')
+    @patch('core.config.get_bluesky_config')
     def test_create_tool_call_record_success(self, mock_get_bluesky_config):
         """Test successful tool call record creation."""
         # Mock bluesky config to return proper PDS URI
@@ -676,7 +676,7 @@ class TestCreateToolCallRecord:
 
 
 class TestCreateReasoningRecord:
-    @patch('config_loader.get_bluesky_config')
+    @patch('core.config.get_bluesky_config')
     def test_create_reasoning_record_success(self, mock_get_bluesky_config):
         """Test successful reasoning record creation."""
         # Mock bluesky config to return proper PDS URI

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pytest
 import json
 
-from notification_db import NotificationDB
+from utils.notification_db import NotificationDB
 
 
 class TestNotificationDB:

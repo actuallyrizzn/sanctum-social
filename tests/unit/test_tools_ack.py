@@ -2,7 +2,7 @@
 Unit tests for tools/ack.py
 """
 import pytest
-from tools.ack import annotate_ack, AnnotateAckArgs
+from platforms.bluesky.tools.ack import annotate_ack, AnnotateAckArgs
 
 
 class TestAckTool:

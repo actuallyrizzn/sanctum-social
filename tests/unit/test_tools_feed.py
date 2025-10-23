@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from tools.feed import FeedArgs, get_bluesky_feed
+from platforms.bluesky.tools.feed import FeedArgs, get_bluesky_feed
 
 
 class TestFeedArgs:

@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 
 # Mock the config loading before importing bsky
-with patch('config_loader.get_config') as mock_get_config:
+with patch('core.config.get_config') as mock_get_config:
     mock_loader = mock_get_config.return_value
     mock_loader.get_required.side_effect = lambda key: {
         'letta.api_key': 'test-api-key',
@@ -18,7 +18,7 @@ with patch('config_loader.get_config') as mock_get_config:
         'letta.base_url': None
     }.get(key, default)
     
-    from bsky import (
+    from platforms.bluesky.orchestrator import (
         extract_handles_from_data,
         log_with_panel,
         export_agent_state,
@@ -137,11 +137,11 @@ class TestExportAgentState:
         mock_client.agents.list_tools.return_value = []
         mock_client.agents.export_file.return_value = {"agent": "data"}
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
-            with patch('bsky.Path') as mock_path:
+            with patch('platforms.bluesky.orchestrator.Path') as mock_path:
                 mock_path.return_value.exists.return_value = False
                 mock_path.return_value.mkdir.return_value = None
                 
@@ -159,7 +159,7 @@ class TestExportAgentState:
         
         mock_client.agents.get.side_effect = Exception("Agent not found")
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
@@ -175,7 +175,7 @@ class TestExportAgentState:
         mock_client.agents.get.return_value = mock_agent
         mock_client.agents.list_blocks.side_effect = Exception("Blocks error")
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
@@ -193,12 +193,12 @@ class TestInitializeVoid:
         mock_agent.tools = []  # Add tools attribute with length
         mock_client.agents.retrieve.return_value = mock_agent
         
-        with patch('bsky.logger') as mock_logger, \
-             patch('bsky.get_letta_config', return_value={'api_key': 'test-key', 'agent_id': 'test-agent-id', 'timeout': 30}):
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger, \
+             patch('platforms.bluesky.orchestrator.get_letta_config', return_value={'api_key': 'test-key', 'agent_id': 'test-agent-id', 'timeout': 30}):
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
-            with patch('bsky.Letta', return_value=mock_client):
+            with patch('platforms.bluesky.orchestrator.Letta', return_value=mock_client):
                 result = initialize_void()
                 assert result == mock_agent
                 mock_client.agents.retrieve.assert_called_once()
@@ -208,12 +208,12 @@ class TestInitializeVoid:
         mock_client = Mock()
         mock_client.agents.retrieve.side_effect = Exception("Agent not found")
         
-        with patch('bsky.logger') as mock_logger, \
-             patch('bsky.get_letta_config', return_value={'api_key': 'test-key', 'agent_id': 'test-agent-id', 'timeout': 30}):
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger, \
+             patch('platforms.bluesky.orchestrator.get_letta_config', return_value={'api_key': 'test-key', 'agent_id': 'test-agent-id', 'timeout': 30}):
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             
-            with patch('bsky.Letta', return_value=mock_client):
+            with patch('platforms.bluesky.orchestrator.Letta', return_value=mock_client):
                 with pytest.raises(Exception, match="Agent not found"):
                     initialize_void()
 
@@ -271,14 +271,14 @@ class TestProcessedNotifications:
         mock_db = Mock()
         mock_db.get_processed_uris.return_value = processed_data
         
-        with patch('bsky.NOTIFICATION_DB', mock_db):
+        with patch('platforms.bluesky.orchestrator.NOTIFICATION_DB', mock_db):
             result = load_processed_notifications()
             assert result == processed_data
             mock_db.get_processed_uris.assert_called_once()
 
     def test_load_processed_notifications_file_not_exists(self, temp_dir):
         """Test loading processed notifications when database is None."""
-        with patch('bsky.NOTIFICATION_DB', None):
+        with patch('platforms.bluesky.orchestrator.NOTIFICATION_DB', None):
             result = load_processed_notifications()
             assert result == set()
 
@@ -308,14 +308,14 @@ class TestSaveNotificationToQueue:
         mock_db.is_processed.return_value = False
         mock_db.add_notification.return_value = True
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             mock_logger.debug = Mock()
             mock_logger.warning = Mock()
             
-            with patch('bsky.QUEUE_DIR', queue_dir):
-                with patch('bsky.NOTIFICATION_DB', mock_db):
+            with patch('platforms.bluesky.orchestrator.QUEUE_DIR', queue_dir):
+                with patch('platforms.bluesky.orchestrator.NOTIFICATION_DB', mock_db):
                     result = save_notification_to_queue(notification_data)
                     
                     assert result is True
@@ -345,14 +345,14 @@ class TestSaveNotificationToQueue:
         mock_db.is_processed.return_value = False
         mock_db.add_notification.return_value = True
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             mock_logger.debug = Mock()
             mock_logger.warning = Mock()
             
-            with patch('bsky.QUEUE_DIR', queue_dir):
-                with patch('bsky.NOTIFICATION_DB', mock_db):
+            with patch('platforms.bluesky.orchestrator.QUEUE_DIR', queue_dir):
+                with patch('platforms.bluesky.orchestrator.NOTIFICATION_DB', mock_db):
                     result = save_notification_to_queue(notification_data, is_priority=True)
                     
                     assert result is True
@@ -377,14 +377,14 @@ class TestSaveNotificationToQueue:
         mock_db.is_processed.return_value = False
         mock_db.add_notification.return_value = True
         
-        with patch('bsky.logger') as mock_logger:
+        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
             mock_logger.info = Mock()
             mock_logger.error = Mock()
             mock_logger.debug = Mock()
             mock_logger.warning = Mock()
             
-            with patch('bsky.QUEUE_DIR', queue_dir):
-                with patch('bsky.NOTIFICATION_DB', mock_db):
+            with patch('platforms.bluesky.orchestrator.QUEUE_DIR', queue_dir):
+                with patch('platforms.bluesky.orchestrator.NOTIFICATION_DB', mock_db):
                     result = save_notification_to_queue(notification_data)
                     
                     assert result is False

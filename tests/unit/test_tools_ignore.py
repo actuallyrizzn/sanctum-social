@@ -2,7 +2,7 @@
 Unit tests for tools/ignore.py
 """
 import pytest
-from tools.ignore import ignore_notification, IgnoreNotificationArgs
+from platforms.bluesky.tools.ignore import ignore_notification, IgnoreNotificationArgs
 
 
 class TestIgnoreTool:

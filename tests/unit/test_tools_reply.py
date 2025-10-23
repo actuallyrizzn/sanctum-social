@@ -2,7 +2,7 @@
 Unit tests for tools/reply.py
 """
 import pytest
-from tools.reply import bluesky_reply, ReplyArgs
+from platforms.bluesky.tools.reply import bluesky_reply, ReplyArgs
 
 
 class TestReplyTool:

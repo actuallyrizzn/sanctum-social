@@ -4,7 +4,7 @@ Unit tests for utils.py
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from utils import upsert_block, upsert_agent
+from utils.utils import upsert_block, upsert_agent
 
 
 class TestUpsertBlock:

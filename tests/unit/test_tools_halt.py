@@ -2,7 +2,7 @@
 Unit tests for tools/halt.py
 """
 import pytest
-from tools.halt import halt_activity, HaltArgs
+from platforms.bluesky.tools.halt import halt_activity, HaltArgs
 
 
 class TestHaltTool:

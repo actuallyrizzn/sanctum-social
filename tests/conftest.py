@@ -395,7 +395,7 @@ def frozen_time():
 @pytest.fixture
 def notification_db(temp_dir):
     """Create a NotificationDB instance with proper cleanup."""
-    from notification_db import NotificationDB
+    from utils.notification_db import NotificationDB
     db_path = temp_dir / "test.db"
     with NotificationDB(str(db_path)) as db:
         yield db

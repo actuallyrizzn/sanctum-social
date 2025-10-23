@@ -7,8 +7,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from config_loader import ConfigLoader
-from notification_db import NotificationDB
+from core.config import ConfigLoader
+from utils.notification_db import NotificationDB
 
 
 @pytest.mark.live
@@ -165,7 +165,7 @@ class TestErrorRecoveryWorkflow:
             'BSKY_USERNAME': 'test.bsky.social',
             'BSKY_PASSWORD': 'test-password'
         }):
-            from config_loader import get_letta_config, get_bluesky_config
+            from core.config import get_letta_config, get_bluesky_config
             
             letta_config = get_letta_config()
             assert letta_config["api_key"] == "test-key"
@@ -209,7 +209,7 @@ class TestErrorRecoveryWorkflow:
             # Mock API error
             mock_get.side_effect = Exception("API Error")
             
-            from tools.search import search_bluesky_posts
+            from platforms.bluesky.tools.search import search_bluesky_posts
             
             # Should return error message, not raise exception
             result = search_bluesky_posts("test query")

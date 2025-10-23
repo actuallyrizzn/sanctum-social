@@ -8,8 +8,8 @@ from pathlib import Path
 # Add the current directory to path so we can import modules
 sys.path.append(str(Path(__file__).parent))
 
-from x import ensure_x_user_blocks_attached, get_cached_thread_context
-from tools.blocks import x_user_note_view
+from platforms.x.orchestrator import ensure_x_user_blocks_attached, get_cached_thread_context
+from platforms.bluesky.tools.blocks import x_user_note_view
 
 def test_x_user_blocks():
     """Test X user block creation and attachment."""
@@ -32,7 +32,7 @@ def test_x_user_blocks():
     print(f"📊 Users in thread: {list(thread_data.get('users', {}).keys())}")
     
     # Get the configured void agent ID
-    from config_loader import get_letta_config
+    from core.config import get_letta_config
     letta_config = get_letta_config()
     agent_id = letta_config['agent_id']
     print(f"🎯 Using configured void agent {agent_id} for testing")

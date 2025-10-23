@@ -4,12 +4,12 @@ import json
 import yaml
 
 # Import Discord modules
-from discord_utils import mention_to_yaml_string, thread_to_yaml_string
-from tools.discord_post import create_new_discord_post
-from tools.discord_reply import discord_reply
-from tools.discord_search import search_discord_messages
-from tools.discord_blocks import ignore_discord_users
-from tools.discord_feed import get_discord_feed
+from platforms.discord.utils import mention_to_yaml_string, thread_to_yaml_string
+from platforms.discord.tools.post import create_new_discord_post
+from platforms.discord.tools.reply import discord_reply
+from platforms.discord.tools.search import search_discord_messages
+from platforms.discord.tools.blocks import ignore_discord_users
+from platforms.discord.tools.feed import get_discord_feed
 
 class TestDiscordIntegration:
     """Test Discord integration functionality"""

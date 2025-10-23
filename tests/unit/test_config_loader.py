@@ -8,7 +8,7 @@ from unittest.mock import patch, mock_open
 import pytest
 import yaml
 
-from config_loader import ConfigLoader, get_config, get_letta_config, get_bluesky_config, get_default_config, validate_configuration, check_config_health
+from core.config import ConfigLoader, get_config, get_letta_config, get_bluesky_config, get_default_config, validate_configuration, check_config_health
 
 
 class TestConfigLoader:
@@ -79,7 +79,7 @@ class TestConfigFunctions:
     
     def test_get_config_default_path(self, mock_config_file):
         """Test get_config with default path."""
-        with patch('config_loader.ConfigLoader') as mock_loader_class:
+        with patch('core.config.ConfigLoader') as mock_loader_class:
             mock_loader = mock_loader_class.return_value
             mock_loader.get.return_value = "test_value"
             
@@ -88,13 +88,13 @@ class TestConfigFunctions:
     
     def test_get_config_custom_path(self, mock_config_file):
         """Test get_config with custom path."""
-        with patch('config_loader.ConfigLoader') as mock_loader_class:
+        with patch('core.config.ConfigLoader') as mock_loader_class:
             mock_loader = mock_loader_class.return_value
             mock_loader.get.return_value = "test_value"
             
             # Reset the global instance
-            import config_loader
-            config_loader._config_instance = None
+            import core.config
+            core.config._config_instance = None
             
             result = get_config("custom.yaml")
             mock_loader_class.assert_called_once_with("custom.yaml")
@@ -102,7 +102,7 @@ class TestConfigFunctions:
     
     def test_get_letta_config(self, mock_config_file):
         """Test getting Letta configuration."""
-        with patch('config_loader.get_config') as mock_get_config:
+        with patch('core.config.get_config') as mock_get_config:
             mock_loader = mock_get_config.return_value
             mock_loader.get_required.side_effect = lambda key: {
                 'letta.api_key': 'test-key',
@@ -121,7 +121,7 @@ class TestConfigFunctions:
     
     def test_get_bluesky_config(self, mock_config_file):
         """Test getting Bluesky configuration."""
-        with patch('config_loader.get_config') as mock_get_config:
+        with patch('core.config.get_config') as mock_get_config:
             mock_loader = mock_get_config.return_value
             mock_loader.get_required.side_effect = lambda key: {
                 'bluesky.username': 'test.bsky.social',
@@ -138,7 +138,7 @@ class TestConfigFunctions:
     
     def test_get_letta_config_with_env_fallback(self, mock_env_vars):
         """Test Letta config with environment variable fallback."""
-        with patch('config_loader.get_config') as mock_get_config:
+        with patch('core.config.get_config') as mock_get_config:
             mock_loader = mock_get_config.return_value
             mock_loader.get_required.side_effect = lambda key: {
                 'letta.api_key': 'test-letta-api-key',
@@ -154,7 +154,7 @@ class TestConfigFunctions:
     
     def test_get_bluesky_config_with_env_fallback(self, mock_env_vars):
         """Test Bluesky config with environment variable fallback."""
-        with patch('config_loader.get_config') as mock_get_config:
+        with patch('core.config.get_config') as mock_get_config:
             mock_loader = mock_get_config.return_value
             mock_loader.get_required.side_effect = lambda key: {
                 'bluesky.username': 'test.bsky.social',
@@ -298,7 +298,7 @@ class TestConfigLoaderWithDefaults:
         """Test ConfigLoader initialization with defaults when file is missing."""
         missing_config = temp_dir / "missing.yaml"
         
-        with patch('config_loader.logger') as mock_logger:
+        with patch('core.config.logger') as mock_logger:
             loader = ConfigLoader(str(missing_config), use_defaults=True)
             
             # Should use default config

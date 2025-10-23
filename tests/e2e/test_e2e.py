@@ -15,13 +15,13 @@ from pathlib import Path
 
 # Import main modules for E2E testing
 from tool_manager import ensure_platform_tools, get_attached_tools
-from queue_manager import load_notification, list_notifications, delete_by_handle
-from notification_recovery import recover_notifications, check_database_health
-from notification_db import NotificationDB
-from tools.blocks import attach_user_blocks, user_note_append, user_note_view
-from tools.post import create_new_bluesky_post
-from tools.search import search_bluesky_posts
-from tools.feed import get_bluesky_feed
+from utils.queue_manager import load_notification, list_notifications, delete_by_handle
+from utils.notification_recovery import recover_notifications, check_database_health
+from utils.notification_db import NotificationDB
+from platforms.bluesky.tools.blocks import attach_user_blocks, user_note_append, user_note_view
+from platforms.bluesky.tools.post import create_new_bluesky_post
+from platforms.bluesky.tools.search import search_bluesky_posts
+from platforms.bluesky.tools.feed import get_bluesky_feed
 
 
 @pytest.mark.live

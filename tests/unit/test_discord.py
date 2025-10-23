@@ -6,7 +6,7 @@ from pathlib import Path
 import os
 
 # Import Discord modules
-from discord_utils import (
+from platforms.discord.utils import (
     mention_to_yaml_string,
     thread_to_yaml_string,
     convert_to_basic_types,
@@ -19,11 +19,11 @@ from discord_utils import (
 )
 
 # Import Discord tools
-from tools.discord_post import create_new_discord_post, DiscordPostArgs
-from tools.discord_reply import discord_reply, DiscordReplyArgs
-from tools.discord_search import search_discord_messages, DiscordSearchArgs
-from tools.discord_blocks import ignore_discord_users, unignore_discord_users, DiscordIgnoreArgs
-from tools.discord_feed import get_discord_feed, DiscordFeedArgs
+from platforms.discord.tools.post import create_new_discord_post, DiscordPostArgs
+from platforms.discord.tools.reply import discord_reply, DiscordReplyArgs
+from platforms.discord.tools.search import search_discord_messages, DiscordSearchArgs
+from platforms.discord.tools.blocks import ignore_discord_users, unignore_discord_users, DiscordIgnoreArgs
+from platforms.discord.tools.feed import get_discord_feed, DiscordFeedArgs
 
 class TestDiscordUtils:
     """Test Discord utility functions"""

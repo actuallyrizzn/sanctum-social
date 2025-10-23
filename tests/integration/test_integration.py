@@ -14,12 +14,12 @@ from pathlib import Path
 
 # Import the modules we want to test integration between
 from tool_manager import ensure_platform_tools, get_attached_tools
-from queue_manager import load_notification, list_notifications, delete_by_handle, count_by_handle, stats
-from notification_db import NotificationDB
-from tools.blocks import attach_user_blocks, detach_user_blocks, user_note_append
-from tools.post import create_new_bluesky_post
-from tools.search import search_bluesky_posts
-from tools.feed import get_bluesky_feed
+from utils.queue_manager import load_notification, list_notifications, delete_by_handle, count_by_handle, stats
+from utils.notification_db import NotificationDB
+from platforms.bluesky.tools.blocks import attach_user_blocks, detach_user_blocks, user_note_append
+from platforms.bluesky.tools.post import create_new_bluesky_post
+from platforms.bluesky.tools.search import search_bluesky_posts
+from platforms.bluesky.tools.feed import get_bluesky_feed
 
 
 @pytest.mark.live

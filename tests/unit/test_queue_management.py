@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch, mock_open
 from typing import Dict, Any
 
 # Import the functions we're testing
-from queue_manager import (
+from utils.queue_manager import (
     QueueError,
     TransientQueueError,
     PermanentQueueError,
@@ -328,9 +328,9 @@ class TestQueueHealthMonitoring:
     
     def test_get_queue_metrics_empty_queue(self, temp_dir):
         """Test getting metrics from empty queue."""
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             monitor = QueueHealthMonitor()
             metrics = monitor.get_queue_metrics()
@@ -373,9 +373,9 @@ class TestQueueHealthMonitoring:
         with open(error_dir / "error.json", 'w', encoding='utf-8') as f:
             json.dump(error_notification, f)
         
-        with patch('queue_manager.QUEUE_DIR', queue_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', error_dir), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', no_reply_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', error_dir), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', no_reply_dir):
             
             monitor = QueueHealthMonitor()
             metrics = monitor.get_queue_metrics()
@@ -388,9 +388,9 @@ class TestQueueHealthMonitoring:
     
     def test_check_queue_health_healthy(self, temp_dir):
         """Test queue health check for healthy queue."""
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             monitor = QueueHealthMonitor()
             health = monitor.check_queue_health()
@@ -413,9 +413,9 @@ class TestQueueHealthMonitoring:
             with open(error_dir / f"error_{i}.json", 'w', encoding='utf-8') as f:
                 json.dump(notification, f)
         
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', error_dir), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', error_dir), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             monitor = QueueHealthMonitor()
             health = monitor.check_queue_health()
@@ -424,9 +424,9 @@ class TestQueueHealthMonitoring:
     
     def test_detect_queue_backlog(self, temp_dir):
         """Test queue backlog detection."""
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             monitor = QueueHealthMonitor()
             
@@ -441,9 +441,9 @@ class TestQueueHealthMonitoring:
     
     def test_get_queue_size_trend(self, temp_dir):
         """Test queue size trend detection."""
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             monitor = QueueHealthMonitor()
             
@@ -476,8 +476,8 @@ class TestQueueRepair:
             with open(temp_dir / f"valid_{i}.json", 'w', encoding='utf-8') as f:
                 json.dump(notification, f)
         
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"):
             
             stats = repair_corrupted_queue_files()
             
@@ -497,8 +497,8 @@ class TestQueueRepair:
         with open(corrupted_file, 'w', encoding='utf-8') as f:
             f.write('{"uri": "at://test.bsky.social/post/123", "text": "Test notification"\x00}')  # Invalid JSON
         
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"):
             
             stats = repair_corrupted_queue_files()
             
@@ -514,8 +514,8 @@ class TestQueueRepair:
         with open(corrupted_file, 'w', encoding='utf-8') as f:
             f.write('completely invalid json content')
         
-        with patch('queue_manager.QUEUE_DIR', temp_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"):
+        with patch('utils.queue_manager.QUEUE_DIR', temp_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"):
             
             stats = repair_corrupted_queue_files()
             
@@ -564,9 +564,9 @@ class TestIntegration:
         queue_dir = temp_dir / "queue"
         queue_dir.mkdir()
         
-        with patch('queue_manager.QUEUE_DIR', queue_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', temp_dir / "errors"), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             # 1. Save notification
             notification = {
@@ -601,9 +601,9 @@ class TestIntegration:
         queue_dir.mkdir()
         error_dir.mkdir()
         
-        with patch('queue_manager.QUEUE_DIR', queue_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', error_dir), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', error_dir), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', temp_dir / "no_reply"):
             
             # 1. Create corrupted file
             corrupted_file = queue_dir / "corrupted.json"

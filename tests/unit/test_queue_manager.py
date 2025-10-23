@@ -7,7 +7,7 @@ from pathlib import Path
 import json
 import tempfile
 import shutil
-from queue_manager import (
+from utils.queue_manager import (
     load_notification,
     list_notifications,
     delete_by_handle,
@@ -59,9 +59,9 @@ class TestQueueManager:
         with pytest.raises(PermanentQueueError):
             load_notification(invalid_json_file)
     
-    @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
-    @patch('queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
-    @patch('queue_manager.QUEUE_NO_REPLY_DIR', Path("test_queue/no_reply"))
+    @patch('utils.queue_manager.QUEUE_DIR', Path("test_queue"))
+    @patch('utils.queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
+    @patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', Path("test_queue/no_reply"))
     def test_list_notifications_queue_only(self, tmp_path):
         """Test listing notifications from queue directory only."""
         # Create test queue structure
@@ -86,9 +86,9 @@ class TestQueueManager:
             json.dump(notification2, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
                     # Test listing
                     result = list_notifications()
                     
@@ -96,9 +96,9 @@ class TestQueueManager:
                     assert any(n["uri"] == "at://test1.bsky.social/post/123" for n in result)
                     assert any(n["uri"] == "at://test2.bsky.social/post/456" for n in result)
     
-    @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
-    @patch('queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
-    @patch('queue_manager.QUEUE_NO_REPLY_DIR', Path("test_queue/no_reply"))
+    @patch('utils.queue_manager.QUEUE_DIR', Path("test_queue"))
+    @patch('utils.queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
+    @patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', Path("test_queue/no_reply"))
     def test_list_notifications_with_handle_filter(self, tmp_path):
         """Test listing notifications with handle filter."""
         # Create test queue structure
@@ -123,18 +123,18 @@ class TestQueueManager:
             json.dump(notification2, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
                     # Test listing with filter
                     result = list_notifications(handle_filter="test1.bsky.social")
                     
                     assert len(result) == 1
                     assert result[0]["uri"] == "at://test1.bsky.social/post/123"
     
-    @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
-    @patch('queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
-    @patch('queue_manager.QUEUE_NO_REPLY_DIR', Path("test_queue/no_reply"))
+    @patch('utils.queue_manager.QUEUE_DIR', Path("test_queue"))
+    @patch('utils.queue_manager.QUEUE_ERROR_DIR', Path("test_queue/errors"))
+    @patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', Path("test_queue/no_reply"))
     def test_list_notifications_show_all(self, tmp_path):
         """Test listing notifications from all directories."""
         # Create test queue structure
@@ -171,9 +171,9 @@ class TestQueueManager:
             json.dump(no_reply_notification, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', error_dir):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', no_reply_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', error_dir):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', no_reply_dir):
                     # Test listing all
                     result = list_notifications(show_all=True)
                     
@@ -206,10 +206,10 @@ class TestQueueManager:
             json.dump(notification2, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
             # Mock console.print and Confirm.ask
-            with patch('queue_manager.console.print') as mock_print:
-                with patch('queue_manager.Confirm.ask', return_value=True):
+            with patch('utils.queue_manager.console.print') as mock_print:
+                with patch('utils.queue_manager.Confirm.ask', return_value=True):
                     delete_by_handle("test1.bsky.social")
                     
                     # Verify only test1 notification was deleted
@@ -248,9 +248,9 @@ class TestQueueManager:
             json.dump(notification3, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
             # Mock console.print
-            with patch('queue_manager.console.print') as mock_print:
+            with patch('utils.queue_manager.console.print') as mock_print:
                 count_by_handle()
                 
                 # Verify that console.print was called
@@ -273,9 +273,9 @@ class TestQueueManager:
             json.dump(notification1, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
             # Mock console.print
-            with patch('queue_manager.console.print') as mock_print:
+            with patch('utils.queue_manager.console.print') as mock_print:
                 stats()
                 
                 # Verify that console.print was called
@@ -298,10 +298,10 @@ class TestQueueManager:
             json.dump(notification1, f)
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
             # Mock console.print and Confirm.ask
-            with patch('queue_manager.console.print') as mock_print:
-                with patch('queue_manager.Confirm.ask', return_value=False):
+            with patch('utils.queue_manager.console.print') as mock_print:
+                with patch('utils.queue_manager.Confirm.ask', return_value=False):
                     delete_by_handle("test1.bsky.social")
                     
                     # Verify file was not deleted
@@ -313,7 +313,7 @@ class TestQueueManager:
         assert QUEUE_ERROR_DIR == QUEUE_DIR / "errors"
         assert QUEUE_NO_REPLY_DIR == QUEUE_DIR / "no_reply"
     
-    @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
+    @patch('utils.queue_manager.QUEUE_DIR', Path("test_queue"))
     def test_list_notifications_empty_queue(self, tmp_path):
         """Test listing notifications from empty queue."""
         # Create empty queue directory
@@ -321,23 +321,23 @@ class TestQueueManager:
         queue_dir.mkdir()
 
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
                     # Test listing
                     result = list_notifications()
                     
                     assert result is None
     
-    @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
+    @patch('utils.queue_manager.QUEUE_DIR', Path("test_queue"))
     def test_list_notifications_nonexistent_directories(self, tmp_path):
         """Test listing notifications when directories don't exist."""
         # Don't create any directories
 
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', tmp_path / "nonexistent"):
-            with patch('queue_manager.QUEUE_ERROR_DIR', tmp_path / "nonexistent" / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', tmp_path / "nonexistent" / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', tmp_path / "nonexistent"):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', tmp_path / "nonexistent" / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', tmp_path / "nonexistent" / "no_reply"):
                     # Test listing
                     result = list_notifications()
                     
@@ -354,7 +354,7 @@ class TestQueueManager:
             with pytest.raises(TransientQueueError):
                 load_notification(notification_file)
     
-    @patch('queue_manager.QUEUE_DIR', Path("test_queue"))
+    @patch('utils.queue_manager.QUEUE_DIR', Path("test_queue"))
     def test_list_notifications_with_invalid_json_files(self, tmp_path):
         """Test listing notifications with invalid JSON files."""
         # Create test queue structure
@@ -376,9 +376,9 @@ class TestQueueManager:
             f.write("invalid json content")
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
                     # Test listing
                     result = list_notifications()
                     
@@ -404,9 +404,9 @@ class TestQueueManager:
         notification_file.write_text(json.dumps(notification_data))
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
                     # Test listing with filter that won't match
                     result = list_notifications(handle_filter="nonexistent")
                     
@@ -431,9 +431,9 @@ class TestQueueManager:
         notification_file.write_text(json.dumps(notification_data))
         
         # Mock the queue directories
-        with patch('queue_manager.QUEUE_DIR', queue_dir):
-            with patch('queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
-                with patch('queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
+        with patch('utils.queue_manager.QUEUE_DIR', queue_dir):
+            with patch('utils.queue_manager.QUEUE_ERROR_DIR', queue_dir / "errors"):
+                with patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', queue_dir / "no_reply"):
                     # Test listing
                     result = list_notifications()
                     
@@ -718,13 +718,13 @@ class TestQueueManager:
 
     def test_cli_main_function_list_with_handle(self):
         """Test CLI main function with list command and handle filter."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.list_notifications') as mock_list_notifications:
+        with patch('utils.queue_manager.list_notifications') as mock_list_notifications:
             with patch('sys.argv', ['queue_manager.py', 'list', '--handle', 'test.user']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -732,13 +732,13 @@ class TestQueueManager:
 
     def test_cli_main_function_list_with_all(self):
         """Test CLI main function with list command and --all flag."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.list_notifications') as mock_list_notifications:
+        with patch('utils.queue_manager.list_notifications') as mock_list_notifications:
             with patch('sys.argv', ['queue_manager.py', 'list', '--all']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -746,13 +746,13 @@ class TestQueueManager:
 
     def test_cli_main_function_delete_with_dry_run(self):
         """Test CLI main function with delete command and dry-run."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.delete_by_handle') as mock_delete:
+        with patch('utils.queue_manager.delete_by_handle') as mock_delete:
             with patch('sys.argv', ['queue_manager.py', 'delete', 'test.user', '--dry-run']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -760,13 +760,13 @@ class TestQueueManager:
 
     def test_cli_main_function_delete_with_force(self):
         """Test CLI main function with delete command and force."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.delete_by_handle') as mock_delete:
+        with patch('utils.queue_manager.delete_by_handle') as mock_delete:
             with patch('sys.argv', ['queue_manager.py', 'delete', 'test.user', '--force']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -774,13 +774,13 @@ class TestQueueManager:
 
     def test_cli_main_function_stats(self):
         """Test CLI main function with stats command."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.stats') as mock_stats:
+        with patch('utils.queue_manager.stats') as mock_stats:
             with patch('sys.argv', ['queue_manager.py', 'stats']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -788,13 +788,13 @@ class TestQueueManager:
 
     def test_cli_main_function_count(self):
         """Test CLI main function with count command."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.count_by_handle') as mock_count:
+        with patch('utils.queue_manager.count_by_handle') as mock_count:
             with patch('sys.argv', ['queue_manager.py', 'count']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -802,13 +802,13 @@ class TestQueueManager:
 
     def test_cli_main_function_no_command(self):
         """Test CLI main function with no command (should print help)."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch
         
-        with patch('queue_manager.argparse.ArgumentParser.print_help') as mock_help:
+        with patch('utils.queue_manager.argparse.ArgumentParser.print_help') as mock_help:
             with patch('sys.argv', ['queue_manager.py']):
                 try:
-                    queue_manager.main()
+                    utils.queue_manager.main()
                 except SystemExit:
                     pass
             
@@ -816,7 +816,7 @@ class TestQueueManager:
 
     def test_list_notifications_unknown_directory(self):
         """Test list_notifications with unknown directory source."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch, Mock
         from pathlib import Path
         
@@ -826,26 +826,26 @@ class TestQueueManager:
         mock_dir.glob.return_value = []
         
         # Mock the directory constants to return different values
-        with patch('queue_manager.QUEUE_DIR', Path('/queue')), \
-             patch('queue_manager.QUEUE_ERROR_DIR', Path('/errors')), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', Path('/no_reply')):
+        with patch('utils.queue_manager.QUEUE_DIR', Path('/queue')), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', Path('/errors')), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', Path('/no_reply')):
             
             # Create a directory that doesn't match any of the known ones
             unknown_dir = Mock(spec=Path)
             unknown_dir.exists.return_value = True
             unknown_dir.glob.return_value = []
             
-            with patch('queue_manager.Path') as mock_path:
+            with patch('utils.queue_manager.Path') as mock_path:
                 mock_path.return_value = unknown_dir
                 
-                result = queue_manager.list_notifications()
+                result = utils.queue_manager.list_notifications()
                 
                 # Should return None when no notifications found
                 assert result is None
 
     def test_count_by_handle_nonexistent_directory(self):
         """Test count_by_handle with nonexistent directories."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch, Mock
         from pathlib import Path
         
@@ -853,18 +853,18 @@ class TestQueueManager:
         mock_dir = Mock(spec=Path)
         mock_dir.exists.return_value = False
         
-        with patch('queue_manager.QUEUE_DIR', mock_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', mock_dir), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', mock_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', mock_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', mock_dir), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', mock_dir):
             
-            result = queue_manager.count_by_handle()
+            result = utils.queue_manager.count_by_handle()
             
             # Should return None when no directories exist
             assert result is None
 
     def test_count_by_handle_subdirectory_skip(self):
         """Test count_by_handle skipping subdirectories."""
-        import queue_manager
+        import utils.queue_manager
         from unittest.mock import patch, Mock
         from pathlib import Path
         
@@ -879,11 +879,11 @@ class TestQueueManager:
         
         mock_dir.glob.return_value = [mock_filepath]
         
-        with patch('queue_manager.QUEUE_DIR', mock_dir), \
-             patch('queue_manager.QUEUE_ERROR_DIR', mock_dir), \
-             patch('queue_manager.QUEUE_NO_REPLY_DIR', mock_dir):
+        with patch('utils.queue_manager.QUEUE_DIR', mock_dir), \
+             patch('utils.queue_manager.QUEUE_ERROR_DIR', mock_dir), \
+             patch('utils.queue_manager.QUEUE_NO_REPLY_DIR', mock_dir):
             
-            result = queue_manager.count_by_handle()
+            result = utils.queue_manager.count_by_handle()
             
             # Should return None when only subdirectories are found
             assert result is None

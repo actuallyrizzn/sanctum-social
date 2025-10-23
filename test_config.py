@@ -8,7 +8,7 @@ Run this to verify your config.yaml setup is working correctly.
 def test_config_loading():
     """Test that configuration can be loaded successfully."""
     try:
-        from config_loader import (
+        from core.config import (
             get_config,
             get_letta_config,
             get_bluesky_config,

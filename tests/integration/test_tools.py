@@ -6,10 +6,10 @@ from unittest.mock import Mock, patch, MagicMock
 import json
 import os
 
-from tools.blocks import attach_user_blocks, detach_user_blocks
-from tools.reply import bluesky_reply
-from tools.post import create_new_bluesky_post
-from tools.search import search_bluesky_posts
+from platforms.bluesky.tools.blocks import attach_user_blocks, detach_user_blocks
+from platforms.bluesky.tools.reply import bluesky_reply
+from platforms.bluesky.tools.post import create_new_bluesky_post
+from platforms.bluesky.tools.search import search_bluesky_posts
 
 
 @pytest.mark.live
@@ -243,7 +243,7 @@ class TestToolConfiguration:
     def test_tool_client_creation(self):
         """Test that tools can create their own clients."""
         # Test that tools can import and create clients
-        from tools.blocks import get_letta_client
+        from platforms.bluesky.tools.blocks import get_letta_client
         
         # Should not raise import error
         assert callable(get_letta_client)
@@ -251,7 +251,7 @@ class TestToolConfiguration:
     def test_tool_environment_fallback(self):
         """Test that tools fall back to environment variables."""
         with patch.dict(os.environ, {"LETTA_API_KEY": "test-key"}):
-            from tools.blocks import get_letta_client
+            from platforms.bluesky.tools.blocks import get_letta_client
             
             # Should be able to create client with env var
             client = get_letta_client()
@@ -265,7 +265,7 @@ class TestToolConfiguration:
                 "timeout": 30
             }
             
-            from tools.blocks import get_letta_client
+            from platforms.bluesky.tools.blocks import get_letta_client
             
             # Should be able to create client with config
             client = get_letta_client()

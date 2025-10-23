@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch, mock_open
 from pydantic_core import ValidationError
-from tools.blocks import (
+from platforms.bluesky.tools.blocks import (
     get_letta_client,
     get_x_letta_client,
     get_platform_letta_client,
@@ -32,7 +32,7 @@ from tools.blocks import (
 class TestGetLettaClient:
     def test_get_letta_client_with_config(self):
         """Test getting Letta client with config file."""
-        with patch('config_loader.get_letta_config') as mock_config:
+        with patch('core.config.get_letta_config') as mock_config:
             mock_config.return_value = {
                 'api_key': 'test-api-key',
                 'timeout': 30,
@@ -54,7 +54,7 @@ class TestGetLettaClient:
 
     def test_get_letta_client_without_base_url(self):
         """Test getting Letta client without base_url."""
-        with patch('config_loader.get_letta_config') as mock_config:
+        with patch('core.config.get_letta_config') as mock_config:
             mock_config.return_value = {
                 'api_key': 'test-api-key',
                 'timeout': 30
@@ -74,7 +74,7 @@ class TestGetLettaClient:
 
     def test_get_letta_client_fallback_to_env(self):
         """Test getting Letta client falling back to environment variable."""
-        with patch('config_loader.get_letta_config') as mock_config:
+        with patch('core.config.get_letta_config') as mock_config:
             mock_config.side_effect = FileNotFoundError("Config not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'env-api-key'}):
@@ -90,7 +90,7 @@ class TestGetLettaClient:
 
 class TestGetXLettaClient:
     def test_get_x_letta_client_with_config(self):
-        """Test getting X Letta client with x_config.yaml."""
+        """Test getting X Letta client with config/platforms.yaml."""
         with patch('pathlib.Path') as mock_path_class:
             mock_path = Mock()
             mock_path.exists.return_value = True
@@ -126,7 +126,7 @@ class TestGetXLettaClient:
             mock_path.exists.return_value = False
             mock_path_class.return_value = mock_path
             
-            with patch('tools.blocks.get_letta_client') as mock_get_client:
+            with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
                 mock_client = Mock()
                 mock_get_client.return_value = mock_client
                 
@@ -147,7 +147,7 @@ class TestGetXLettaClient:
                     import yaml
                     mock_yaml.side_effect = yaml.YAMLError("YAML error")
                     
-                    with patch('tools.blocks.get_letta_client') as mock_get_client:
+                    with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
                         mock_client = Mock()
                         mock_get_client.return_value = mock_client
                         
@@ -160,7 +160,7 @@ class TestGetXLettaClient:
 class TestGetPlatformLettaClient:
     def test_get_platform_letta_client_bluesky(self):
         """Test getting platform client for Bluesky."""
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_client = Mock()
             mock_get_client.return_value = mock_client
             
@@ -171,7 +171,7 @@ class TestGetPlatformLettaClient:
 
     def test_get_platform_letta_client_x(self):
         """Test getting platform client for X."""
-        with patch('tools.blocks.get_x_letta_client') as mock_get_x_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_x_client:
             mock_client = Mock()
             mock_get_x_client.return_value = mock_client
             
@@ -335,7 +335,7 @@ class TestAttachUserBlocks:
         mock_block.id = "block-id"
         mock_block.label = "user_test_handle"
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (empty)
@@ -369,7 +369,7 @@ class TestAttachUserBlocks:
         mock_block.id = "block-id"
         mock_block.label = "user_test_handle"
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (empty)
@@ -401,7 +401,7 @@ class TestAttachUserBlocks:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "user_test_handle"
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (already attached)
@@ -422,7 +422,7 @@ class TestAttachUserBlocks:
         # Mock client
         mock_client = Mock()
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'env-key'}):
@@ -458,7 +458,7 @@ class TestDetachUserBlocks:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "user_test_handle"
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (attached)
@@ -481,7 +481,7 @@ class TestDetachUserBlocks:
         # Mock client
         mock_client = Mock()
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (empty)
@@ -502,7 +502,7 @@ class TestDetachUserBlocks:
         mock_client = Mock()
         mock_client.agents.blocks.list.return_value = []
 
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -526,7 +526,7 @@ class TestDetachUserBlocks:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "user_test_handle"
 
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             # Mock current blocks (attached)
@@ -550,7 +550,7 @@ class TestDetachUserBlocks:
         mock_client = Mock()
         mock_client.agents.blocks.list.side_effect = Exception("Outer error")
 
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception) as exc_info:
@@ -574,7 +574,7 @@ class TestUserNoteAppend:
         mock_existing_block.label = "user_test_handle"
         mock_existing_block.value = "Existing content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -597,7 +597,7 @@ class TestUserNoteAppend:
         # Mock client
         mock_client = Mock()
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (no existing block)
@@ -632,7 +632,7 @@ class TestUserNoteAppend:
         mock_client.blocks.list.return_value = []
         mock_client.agents.blocks.list.return_value = []
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -659,7 +659,7 @@ class TestUserNoteReplace:
         mock_existing_block.label = "user_test_handle"
         mock_existing_block.value = "Old text content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -686,7 +686,7 @@ class TestUserNoteReplace:
         mock_existing_block.label = "user_test_handle"
         mock_existing_block.value = "Different content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -714,7 +714,7 @@ class TestUserNoteReplace:
         mock_client.blocks.list.return_value = [mock_existing_block]
         mock_client.blocks.modify.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -738,7 +738,7 @@ class TestUserNoteReplace:
         # Mock block list (no blocks found)
         mock_client.blocks.list.return_value = []
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception) as exc_info:
@@ -761,7 +761,7 @@ class TestUserNoteSet:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "user_test_handle"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -789,7 +789,7 @@ class TestUserNoteSet:
         mock_client.blocks.list.return_value = [mock_existing_block]
         mock_client.blocks.modify.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -816,7 +816,7 @@ class TestUserNoteView:
         mock_existing_block.label = "user_test_handle"
         mock_existing_block.value = "Block content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -841,7 +841,7 @@ class TestAttachXUserBlocks:
         mock_block.id = "block-id"
         mock_block.label = "x_user_123456789"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (empty)
@@ -875,7 +875,7 @@ class TestAttachXUserBlocks:
         mock_block.id = "block-id"
         mock_block.label = "x_user_123456789"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (empty)
@@ -912,7 +912,7 @@ class TestAttachXUserBlocks:
         mock_client.blocks.create.return_value = mock_block
         mock_client.agents.blocks.attach.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -936,7 +936,7 @@ class TestAttachXUserBlocks:
         mock_client.blocks.list.return_value = []
         mock_client.blocks.create.side_effect = Exception("Block creation failed")
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             result = attach_x_user_blocks(['123456789'], mock_agent_state)
@@ -954,7 +954,7 @@ class TestAttachXUserBlocks:
         mock_client = Mock()
         mock_client.agents.blocks.list.side_effect = Exception("Outer error")
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception) as exc_info:
@@ -977,7 +977,7 @@ class TestDetachXUserBlocks:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "x_user_123456789"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock current blocks (attached)
@@ -1001,7 +1001,7 @@ class TestDetachXUserBlocks:
         mock_client = Mock()
         mock_client.agents.blocks.list.return_value = []
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -1025,7 +1025,7 @@ class TestDetachXUserBlocks:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "x_user_123456789"
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             # Mock current blocks (attached)
@@ -1049,7 +1049,7 @@ class TestDetachXUserBlocks:
         mock_client = Mock()
         mock_client.agents.blocks.list.side_effect = Exception("Outer error")
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception) as exc_info:
@@ -1073,7 +1073,7 @@ class TestXUserNoteAppend:
         mock_existing_block.label = "x_user_123456789"
         mock_existing_block.value = "Existing content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -1102,7 +1102,7 @@ class TestXUserNoteAppend:
         mock_client.blocks.list.return_value = [mock_existing_block]
         mock_client.blocks.modify.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -1138,7 +1138,7 @@ class TestXUserNoteAppend:
         # Mock agent block attachment
         mock_client.agents.blocks.attach.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             result = x_user_note_append('123456789', 'New note', mock_agent_state)
@@ -1170,7 +1170,7 @@ class TestXUserNoteAppend:
         mock_attached_block.label = "x_user_123456789"
         mock_client.agents.blocks.list.return_value = [mock_attached_block]
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             result = x_user_note_append('123456789', 'New note', mock_agent_state)
@@ -1189,7 +1189,7 @@ class TestXUserNoteAppend:
         mock_client = Mock()
         mock_client.blocks.list.side_effect = Exception("Outer error")
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception) as exc_info:
@@ -1221,7 +1221,7 @@ class TestAttachUserBlocksErrorHandling:
         # Mock block list (existing block found)
         mock_client.blocks.list.return_value = [mock_existing_block]
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = attach_user_blocks(['test.handle'], mock_agent_state)
@@ -1240,7 +1240,7 @@ class TestAttachUserBlocksErrorHandling:
         mock_client = Mock()
         mock_client.agents.blocks.list.side_effect = Exception("Outer error")
 
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             with pytest.raises(Exception) as exc_info:
@@ -1270,7 +1270,7 @@ class TestAttachUserBlocksErrorHandling:
         # Mock duplicate constraint error
         mock_client.agents.blocks.attach.side_effect = Exception("duplicate key value violates unique constraint unique_label_per_agent")
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = attach_user_blocks(['test.handle'], mock_agent_state)
@@ -1300,7 +1300,7 @@ class TestAttachUserBlocksErrorHandling:
         # Mock other attach error
         mock_client.agents.blocks.attach.side_effect = Exception("Network error")
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = attach_user_blocks(['test.handle'], mock_agent_state)
@@ -1325,7 +1325,7 @@ class TestAttachUserBlocksErrorHandling:
         mock_client.blocks.list.return_value = []
         mock_client.blocks.create.side_effect = Exception("Block creation failed")
         
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = attach_user_blocks(['test.handle'], mock_agent_state)
@@ -1358,7 +1358,7 @@ class TestAttachUserBlocksErrorHandling:
         # Mock agent block attachment
         mock_client.agents.blocks.attach.return_value = Mock()
 
-        with patch('tools.blocks.get_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
             result = attach_user_blocks(['test.user'], mock_agent_state)
@@ -1395,7 +1395,7 @@ class TestUserNoteAppendErrorHandling:
         mock_attached_block.label = "user_test_handle"
         mock_client.agents.blocks.list.return_value = [mock_attached_block]
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = user_note_append('test.handle', 'New note', mock_agent_state)
@@ -1416,7 +1416,7 @@ class TestUserNoteAppendErrorHandling:
         # Mock block list error
         mock_client.blocks.list.side_effect = Exception("Database error")
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1451,7 +1451,7 @@ class TestUserNoteSetErrorHandling:
         # Mock agent block attachment
         mock_client.agents.blocks.attach.return_value = Mock()
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = user_note_set('test.handle', 'New content', mock_agent_state)
@@ -1483,7 +1483,7 @@ class TestUserNoteSetErrorHandling:
         mock_attached_block.label = "user_test_handle"
         mock_client.agents.blocks.list.return_value = [mock_attached_block]
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = user_note_set('test.handle', 'New content', mock_agent_state)
@@ -1504,7 +1504,7 @@ class TestUserNoteSetErrorHandling:
         # Mock block list error
         mock_client.blocks.list.side_effect = Exception("Database error")
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1527,7 +1527,7 @@ class TestUserNoteViewErrorHandling:
         # Mock block list (no blocks found)
         mock_client.blocks.list.return_value = []
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = user_note_view('test.handle', mock_agent_state)
@@ -1546,7 +1546,7 @@ class TestUserNoteViewErrorHandling:
         # Mock block list error
         mock_client.blocks.list.side_effect = Exception("Database error")
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1570,7 +1570,7 @@ class TestXUserNoteReplace:
         mock_existing_block.label = "x_user_123456789"
         mock_existing_block.value = "Old text content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -1597,7 +1597,7 @@ class TestXUserNoteReplace:
         mock_existing_block.label = "x_user_123456789"
         mock_existing_block.value = "Different content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -1622,7 +1622,7 @@ class TestXUserNoteReplace:
         # Mock block list (no blocks found)
         mock_client.blocks.list.return_value = []
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1643,7 +1643,7 @@ class TestXUserNoteReplace:
         # Mock block list error
         mock_client.blocks.list.side_effect = Exception("Database error")
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1667,7 +1667,7 @@ class TestXUserNoteReplace:
         mock_client.blocks.list.return_value = [mock_existing_block]
         mock_client.blocks.modify.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -1693,7 +1693,7 @@ class TestXUserNoteSet:
         mock_existing_block.id = "existing-block-id"
         mock_existing_block.label = "x_user_123456789"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -1731,7 +1731,7 @@ class TestXUserNoteSet:
         # Mock agent block attachment
         mock_client.agents.blocks.attach.return_value = Mock()
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = x_user_note_set('123456789', 'New content', mock_agent_state)
@@ -1763,7 +1763,7 @@ class TestXUserNoteSet:
         mock_attached_block.label = "x_user_123456789"
         mock_client.agents.blocks.list.return_value = [mock_attached_block]
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = x_user_note_set('123456789', 'New content', mock_agent_state)
@@ -1784,7 +1784,7 @@ class TestXUserNoteSet:
         # Mock block list error
         mock_client.blocks.list.side_effect = Exception("Database error")
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1807,7 +1807,7 @@ class TestXUserNoteSet:
         mock_client.blocks.list.return_value = [mock_existing_block]
         mock_client.blocks.modify.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -1834,7 +1834,7 @@ class TestXUserNoteView:
         mock_existing_block.label = "x_user_123456789"
         mock_existing_block.value = "Block content"
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             # Mock block list (existing block found)
@@ -1857,7 +1857,7 @@ class TestXUserNoteView:
         # Mock block list (no blocks found)
         mock_client.blocks.list.return_value = []
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = x_user_note_view('123456789', mock_agent_state)
@@ -1876,7 +1876,7 @@ class TestXUserNoteView:
         # Mock block list error
         mock_client.blocks.list.side_effect = Exception("Database error")
         
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             with pytest.raises(Exception) as exc_info:
@@ -1899,7 +1899,7 @@ class TestXUserNoteView:
         mock_existing_block.value = "Block content"
         mock_client.blocks.list.return_value = [mock_existing_block]
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -1933,7 +1933,7 @@ class TestAttachXUserBlocksCoverage:
         mock_client.blocks.create.return_value = mock_block
         mock_client.agents.blocks.attach.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):
@@ -1966,7 +1966,7 @@ class TestAttachXUserBlocksCoverage:
         mock_client.blocks.create.return_value = mock_block
         mock_client.agents.blocks.attach.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = attach_x_user_blocks(['user1', 'user2'], mock_agent_state)
@@ -1992,7 +1992,7 @@ class TestAttachXUserBlocksCoverage:
         mock_client.blocks.list.return_value = [mock_existing_block]
         mock_client.agents.blocks.attach.return_value = Mock()
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.return_value = mock_client
             
             result = attach_x_user_blocks(['user1'], mock_agent_state)
@@ -2019,7 +2019,7 @@ class TestUserNoteViewCoverage:
         mock_existing_block.value = "Block content"
         mock_client.blocks.list.return_value = [mock_existing_block]
 
-        with patch('tools.blocks.get_x_letta_client') as mock_get_client:
+        with patch('platforms.bluesky.tools.blocks.get_x_letta_client') as mock_get_client:
             mock_get_client.side_effect = ImportError("Module not found")
             
             with patch.dict('os.environ', {'LETTA_API_KEY': 'test-key'}):

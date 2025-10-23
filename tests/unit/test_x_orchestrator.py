@@ -21,8 +21,8 @@ import requests
 from requests.exceptions import HTTPError, ConnectionError, Timeout
 
 # Import the module under test
-import x
-from x import XClient, XRateLimitError
+import platforms.x.orchestrator as x
+from platforms.x.orchestrator import XClient, XRateLimitError
 
 
 class TestXClient:
@@ -75,7 +75,7 @@ class TestXClient:
         assert client.oauth is None
         assert client.headers["Authorization"] == "Bearer test_api_key"
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_make_request_success(self, mock_get):
         """Test successful API request."""
         mock_response = MagicMock()
@@ -90,7 +90,7 @@ class TestXClient:
         assert result == {"data": "test_data"}
         mock_get.assert_called_once()
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_make_request_http_error_401(self, mock_get):
         """Test handling of 401 authentication error."""
         mock_response = MagicMock()
@@ -105,7 +105,7 @@ class TestXClient:
         assert result is None
         mock_get.assert_called_once()
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_make_request_http_error_403(self, mock_get):
         """Test handling of 403 forbidden error."""
         mock_response = MagicMock()
@@ -120,8 +120,8 @@ class TestXClient:
         assert result is None
         mock_get.assert_called_once()
     
-    @patch('x.requests.get')
-    @patch('x.time.sleep')
+    @patch('platforms.x.orchestrator.requests.get')
+    @patch('platforms.x.orchestrator.time.sleep')
     def test_make_request_rate_limit_retry(self, mock_sleep, mock_get):
         """Test handling of rate limit with retry."""
         # First call returns 429, second call succeeds
@@ -144,8 +144,8 @@ class TestXClient:
         assert mock_get.call_count == 2
         mock_sleep.assert_called_once_with(60)  # First backoff time
     
-    @patch('x.requests.get')
-    @patch('x.time.sleep')
+    @patch('platforms.x.orchestrator.requests.get')
+    @patch('platforms.x.orchestrator.time.sleep')
     def test_make_request_rate_limit_max_retries(self, mock_sleep, mock_get):
         """Test handling of rate limit with max retries exceeded."""
         mock_response = MagicMock()
@@ -162,7 +162,7 @@ class TestXClient:
         assert mock_get.call_count == 2
         assert mock_sleep.call_count == 1
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_get_mentions_success(self, mock_get):
         """Test successful mentions retrieval."""
         mock_response = MagicMock()
@@ -196,7 +196,7 @@ class TestXClient:
         assert mentions[0]["id"] == "123456789"
         assert mentions[0]["text"] == "Test mention"
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_get_mentions_with_since_id(self, mock_get):
         """Test mentions retrieval with since_id parameter."""
         mock_response = MagicMock()
@@ -215,7 +215,7 @@ class TestXClient:
         assert call_args[1]["params"]["since_id"] == "123456789"
         assert call_args[1]["params"]["max_results"] == 50
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_get_mentions_max_results_boundary(self, mock_get):
         """Test mentions retrieval with boundary max_results values."""
         mock_response = MagicMock()
@@ -260,7 +260,7 @@ class TestXConfiguration:
         }
         
         with patch('builtins.open', mock_open(read_data=json.dumps(test_config))):
-            with patch('x.yaml.safe_load', return_value=test_config):
+            with patch('platforms.x.orchestrator.yaml.safe_load', return_value=test_config):
                 config = x.load_x_config("test_config.yaml")
                 
                 assert config == test_config
@@ -286,7 +286,7 @@ class TestXConfiguration:
             }
         }
         
-        with patch('x.load_x_config', return_value=test_config):
+        with patch('platforms.x.orchestrator.load_x_config', return_value=test_config):
             config = x.get_x_letta_config("test_config.yaml")
             
             assert config['api_key'] == 'test_letta_key'
@@ -305,7 +305,7 @@ class TestXConfiguration:
             }
         }
         
-        with patch('x.load_x_config', return_value=test_config):
+        with patch('platforms.x.orchestrator.load_x_config', return_value=test_config):
             client = x.create_x_client("test_config.yaml")
             
             assert isinstance(client, XClient)
@@ -322,7 +322,7 @@ class TestXQueueOperations:
         test_data = {"last_seen_id": "123456789"}
         
         with patch('builtins.open', mock_open(read_data=json.dumps(test_data))):
-            with patch('x.X_LAST_SEEN_FILE') as mock_file:
+            with patch('platforms.x.orchestrator.X_LAST_SEEN_FILE') as mock_file:
                 mock_file.exists.return_value = True
                 mock_file.__str__ = lambda: "test_last_seen.json"
                 last_seen_id = x.load_last_seen_id()
@@ -331,14 +331,14 @@ class TestXQueueOperations:
     def test_load_last_seen_id_file_not_found(self):
         """Test last seen ID loading with missing file."""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('x.X_LAST_SEEN_FILE', Path("nonexistent.json")):
+            with patch('platforms.x.orchestrator.X_LAST_SEEN_FILE', Path("nonexistent.json")):
                 last_seen_id = x.load_last_seen_id()
                 assert last_seen_id is None
     
     def test_save_last_seen_id_success(self):
         """Test successful last seen ID saving."""
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('x.X_LAST_SEEN_FILE', Path("test_last_seen.json")):
+            with patch('platforms.x.orchestrator.X_LAST_SEEN_FILE', Path("test_last_seen.json")):
                 x.save_last_seen_id("123456789")
                 
                 mock_file.assert_called_once()
@@ -349,7 +349,7 @@ class TestXQueueOperations:
         test_data = ["123456789", "987654321"]
         
         with patch('builtins.open', mock_open(read_data=json.dumps(test_data))):
-            with patch('x.X_PROCESSED_MENTIONS_FILE') as mock_file:
+            with patch('platforms.x.orchestrator.X_PROCESSED_MENTIONS_FILE') as mock_file:
                 mock_file.exists.return_value = True
                 mock_file.__str__ = lambda: "test_processed.json"
                 processed = x.load_processed_mentions()
@@ -358,7 +358,7 @@ class TestXQueueOperations:
     def test_load_processed_mentions_file_not_found(self):
         """Test processed mentions loading with missing file."""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('x.X_PROCESSED_MENTIONS_FILE', Path("nonexistent.json")):
+            with patch('platforms.x.orchestrator.X_PROCESSED_MENTIONS_FILE', Path("nonexistent.json")):
                 processed = x.load_processed_mentions()
                 assert processed == set()
     
@@ -367,7 +367,7 @@ class TestXQueueOperations:
         test_set = {"123456789", "987654321"}
         
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('x.X_PROCESSED_MENTIONS_FILE', Path("test_processed.json")):
+            with patch('platforms.x.orchestrator.X_PROCESSED_MENTIONS_FILE', Path("test_processed.json")):
                 x.save_processed_mentions(test_set)
                 
                 mock_file.assert_called_once()
@@ -378,7 +378,7 @@ class TestXQueueOperations:
         test_content = "user1\nuser2\nuser3\n"
         
         with patch('builtins.open', mock_open(read_data=test_content)):
-            with patch('x.X_DOWNRANK_USERS_FILE') as mock_file:
+            with patch('platforms.x.orchestrator.X_DOWNRANK_USERS_FILE') as mock_file:
                 mock_file.exists.return_value = True
                 mock_file.__str__ = lambda: "test_downrank.txt"
                 downrank_users = x.load_downrank_users()
@@ -387,7 +387,7 @@ class TestXQueueOperations:
     def test_load_downrank_users_file_not_found(self):
         """Test downrank users loading with missing file."""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('x.X_DOWNRANK_USERS_FILE', Path("nonexistent.txt")):
+            with patch('platforms.x.orchestrator.X_DOWNRANK_USERS_FILE', Path("nonexistent.txt")):
                 downrank_users = x.load_downrank_users()
                 assert downrank_users == set()
     
@@ -432,7 +432,7 @@ class TestXCaching:
         }
         
         with patch('builtins.open', mock_open(read_data=json.dumps(test_data))):
-            with patch('x.X_CACHE_DIR') as mock_dir:
+            with patch('platforms.x.orchestrator.X_CACHE_DIR') as mock_dir:
                 mock_file = mock_dir / "thread_test_conv_123.json"
                 mock_file.exists.return_value = True
                 mock_file.__str__ = lambda: "test_cache/thread_test_conv_123.json"
@@ -443,7 +443,7 @@ class TestXCaching:
     def test_get_cached_thread_context_file_not_found(self):
         """Test thread context caching with missing file."""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('x.X_CACHE_DIR', Path("test_cache")):
+            with patch('platforms.x.orchestrator.X_CACHE_DIR', Path("test_cache")):
                 thread_data = x.get_cached_thread_context("test_conv_123")
                 assert thread_data is None
     
@@ -455,7 +455,7 @@ class TestXCaching:
         }
         
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('x.X_CACHE_DIR', Path("test_cache")):
+            with patch('platforms.x.orchestrator.X_CACHE_DIR', Path("test_cache")):
                 with patch('pathlib.Path.mkdir'):
                     x.save_cached_thread_context("test_conv_123", test_data)
                     
@@ -470,7 +470,7 @@ class TestXCaching:
         }
         
         with patch('builtins.open', mock_open(read_data=json.dumps(test_data))):
-            with patch('x.X_CACHE_DIR') as mock_dir:
+            with patch('platforms.x.orchestrator.X_CACHE_DIR') as mock_dir:
                 mock_file = mock_dir / "tweets.json"
                 mock_file.exists.return_value = True
                 mock_file.__str__ = lambda: "test_cache/tweets.json"
@@ -481,7 +481,7 @@ class TestXCaching:
     def test_get_cached_tweets_file_not_found(self):
         """Test tweets caching with missing file."""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            with patch('x.X_CACHE_DIR', Path("test_cache")):
+            with patch('platforms.x.orchestrator.X_CACHE_DIR', Path("test_cache")):
                 tweets = x.get_cached_tweets(["123456789"])
                 assert tweets == {}
     
@@ -497,7 +497,7 @@ class TestXCaching:
         }
         
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('x.X_CACHE_DIR', Path("test_cache")):
+            with patch('platforms.x.orchestrator.X_CACHE_DIR', Path("test_cache")):
                 with patch('pathlib.Path.mkdir'):
                     x.save_cached_tweets(tweets_data, users_data)
                     
@@ -573,9 +573,9 @@ class TestXUtilityFunctions:
         }
         
         with patch('builtins.open', mock_open()) as mock_file:
-            with patch('x.X_QUEUE_DIR', Path("test_queue")):
+            with patch('platforms.x.orchestrator.X_QUEUE_DIR', Path("test_queue")):
                 with patch('pathlib.Path.mkdir'):
-                    with patch('x.hashlib.md5') as mock_md5:
+                    with patch('platforms.x.orchestrator.hashlib.md5') as mock_md5:
                         mock_md5.return_value.hexdigest.return_value = "test_hash"
                         x.save_mention_to_queue(mention)
                         
@@ -592,7 +592,7 @@ class TestXErrorHandling:
         assert str(error) == "Rate limit exceeded"
         assert isinstance(error, Exception)
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_make_request_connection_error(self, mock_get):
         """Test handling of connection errors."""
         mock_get.side_effect = ConnectionError("Connection failed")
@@ -603,7 +603,7 @@ class TestXErrorHandling:
         assert result is None
         mock_get.assert_called_once()
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_make_request_timeout_error(self, mock_get):
         """Test handling of timeout errors."""
         mock_get.side_effect = Timeout("Request timeout")
@@ -614,7 +614,7 @@ class TestXErrorHandling:
         assert result is None
         mock_get.assert_called_once()
     
-    @patch('x.requests.get')
+    @patch('platforms.x.orchestrator.requests.get')
     def test_make_request_invalid_json(self, mock_get):
         """Test handling of invalid JSON response."""
         mock_response = MagicMock()
@@ -677,7 +677,7 @@ class TestXIntegration:
             }
         }
         
-        with patch('x.load_x_config', return_value=test_config):
+        with patch('platforms.x.orchestrator.load_x_config', return_value=test_config):
             client = x.create_x_client("test_config.yaml")
             
             assert isinstance(client, XClient)
@@ -693,9 +693,9 @@ class TestXIntegration:
             "author_id": "987654321"
         }
         
-        with patch('x.save_mention_to_queue') as mock_save:
-            with patch('x.load_last_seen_id', return_value="123456789"):
-                with patch('x.save_last_seen_id') as mock_save_last:
+        with patch('platforms.x.orchestrator.save_mention_to_queue') as mock_save:
+            with patch('platforms.x.orchestrator.load_last_seen_id', return_value="123456789"):
+                with patch('platforms.x.orchestrator.save_last_seen_id') as mock_save_last:
                     # Simulate queue workflow
                     x.save_mention_to_queue(test_mention)
                     x.save_last_seen_id("123456789")
