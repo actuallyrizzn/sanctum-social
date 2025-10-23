@@ -326,14 +326,20 @@ class TestBlueskyNotificationProcessing:
         assert result is not None
         mock_thread_to_yaml.assert_called_once()
     
+    @patch('platforms.bluesky.orchestrator.get_config')
     @patch('platforms.bluesky.orchestrator.attach_user_blocks')
-    def test_process_mention_with_user_blocks(self, mock_attach_blocks):
+    def test_process_mention_with_user_blocks(self, mock_attach_blocks, mock_get_config):
         """Test mention processing with user block attachment."""
         mock_agent = MagicMock()
         mock_agent.id = 'test_agent_id'
         mock_agent.memory = MagicMock()
         
         mock_atproto_client = MagicMock()
+        
+        # Mock config
+        mock_config = MagicMock()
+        mock_config.get_stop_command.return_value = "#testagentstop"
+        mock_get_config.return_value = mock_config
         
         notification_data = {
             'uri': 'at://did:plc:test123456789/app.bsky.feed.post/test123',
