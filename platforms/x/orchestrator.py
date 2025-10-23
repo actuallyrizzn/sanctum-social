@@ -15,6 +15,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 import platforms.bluesky.utils as bsky_utils
+from core.config import get_config
 
 class XRateLimitError(Exception):
     """Exception raised when X API rate limit is exceeded"""
@@ -1432,13 +1433,13 @@ def reply_to_cameron_post():
     except Exception as e:
         print(f"Reply failed: {e}")
 
-def process_x_mention(void_agent, x_client, mention_data, queue_filepath=None, testing_mode=False):
+def process_x_mention(agent, x_client, mention_data, queue_filepath=None, testing_mode=False):
     """
     Process an X mention and generate a reply using the Letta agent.
     Similar to bsky.py process_mention but for X/Twitter.
     
     Args:
-        void_agent: The Letta agent instance
+        agent: The Letta agent instance
         x_client: The X API client 
         mention_data: The mention data dictionary
         queue_filepath: Optional Path object to the queue file (for cleanup on halt)
@@ -1618,14 +1619,16 @@ def process_x_mention(void_agent, x_client, mention_data, queue_filepath=None, t
             logger.warning(f"Failed to save debug data: {debug_error}")
             # Continue processing even if debug save fails
         
-        # Check for #voidstop
-        if "#voidstop" in thread_context.lower() or "#voidstop" in mention_text.lower():
-            logger.info("Found #voidstop, skipping this mention")
+        # Check for stop command
+        config = get_config()
+        stop_command = config.get_stop_command()
+        if stop_command in thread_context.lower() or stop_command in mention_text.lower():
+            logger.info(f"Found {stop_command}, skipping this mention")
             return True
         
         # Ensure X user blocks are attached
         try:
-            ensure_x_user_blocks_attached(thread_data, void_agent.id)
+            ensure_x_user_blocks_attached(thread_data, agent.id)
         except Exception as e:
             logger.warning(f"Failed to ensure X user blocks: {e}")
             # Continue without user blocks rather than failing completely
@@ -1677,7 +1680,7 @@ To reply, use the add_post_to_x_thread tool:
         try:
             # Use streaming to avoid timeout errors
             message_stream = letta_client.agents.messages.create_stream(
-                agent_id=void_agent.id,
+                agent_id=agent.id,
                 messages=[{"role": "user", "content": prompt}],
                 stream_tokens=False,
                 max_steps=100
@@ -1959,7 +1962,7 @@ def post_x_thread_replies(x_client, in_reply_to_tweet_id, reply_messages):
         logger.error(f"Error posting X thread replies: {e}")
         return False
 
-def load_and_process_queued_x_mentions(void_agent, x_client, testing_mode=False):
+def load_and_process_queued_x_mentions(agent, x_client, testing_mode=False):
     """
     Load and process all X mentions from the queue.
     Similar to bsky.py load_and_process_queued_notifications but for X.
@@ -2001,7 +2004,7 @@ def load_and_process_queued_x_mentions(void_agent, x_client, testing_mode=False)
                 mention_data = queue_data.get('mention', queue_data)
                 
                 # Process the mention
-                success = process_x_mention(void_agent, x_client, mention_data, 
+                success = process_x_mention(agent, x_client, mention_data, 
                                           queue_filepath=filepath, testing_mode=testing_mode)
             
             except XRateLimitError:
@@ -2049,7 +2052,7 @@ def load_and_process_queued_x_mentions(void_agent, x_client, testing_mode=False)
     except Exception as e:
         logger.error(f"Error loading queued X mentions: {e}")
 
-def process_x_notifications(void_agent, x_client, testing_mode=False):
+def process_x_notifications(agent, x_client, testing_mode=False):
     """
     Fetch new X mentions, queue them, and process the queue.
     Similar to bsky.py process_notifications but for X.
@@ -2068,7 +2071,7 @@ def process_x_notifications(void_agent, x_client, testing_mode=False):
             logger.info(f"Found {new_count} new X mentions to process")
         
         # Process the entire queue
-        load_and_process_queued_x_mentions(void_agent, x_client, testing_mode)
+        load_and_process_queued_x_mentions(agent, x_client, testing_mode)
         
     except Exception as e:
         logger.error(f"Error processing X notifications: {e}")
@@ -2112,9 +2115,9 @@ def periodic_user_block_cleanup(client, agent_id: str) -> None:
     except Exception as e:
         logger.error(f"Error during periodic user block cleanup: {e}")
 
-def initialize_x_void():
-    """Initialize the void agent for X operations."""
-    logger.info("Starting void agent initialization for X...")
+def initialize_x_agent():
+    """Initialize the agent for X operations."""
+    logger.info("Starting agent initialization for X...")
     
     from letta_client import Letta
 
@@ -2124,8 +2127,8 @@ def initialize_x_void():
     agent_id = config['agent_id']
     
     try:
-        void_agent = client.agents.retrieve(agent_id=agent_id)
-        logger.info(f"Successfully loaded void agent for X: {void_agent.name} ({agent_id})")
+        agent = client.agents.retrieve(agent_id=agent_id)
+        logger.info(f"Successfully loaded void agent for X: {agent.name} ({agent_id})")
     except Exception as e:
         logger.error(f"Failed to load void agent {agent_id}: {e}")
         raise e
@@ -2138,16 +2141,16 @@ def initialize_x_void():
     logger.info("Configuring tools for X platform...")
     try:
         from tool_manager import ensure_platform_tools
-        ensure_platform_tools('x', void_agent.id, config['api_key'])
+        ensure_platform_tools('x', agent.id, config['api_key'])
     except Exception as e:
         logger.error(f"Failed to configure platform tools: {e}")
         logger.warning("Continuing with existing tool configuration")
     
     # Log agent details
-    logger.info(f"X Void agent details - ID: {void_agent.id}")
-    logger.info(f"Agent name: {void_agent.name}")
+    logger.info(f"X Void agent details - ID: {agent.id}")
+    logger.info(f"Agent name: {agent.name}")
     
-    return void_agent
+    return agent
 
 def x_main_loop(testing_mode=False, cleanup_interval=10):
     """
@@ -2168,8 +2171,8 @@ def x_main_loop(testing_mode=False, cleanup_interval=10):
     setup_logging_from_config()
 
     # Initialize void agent
-    void_agent = initialize_x_void()
-    logger.info(f"X void agent initialized: {void_agent.id}")
+    agent = initialize_x_void()
+    logger.info(f"X void agent initialized: {agent.id}")
     
     # Initialize X client
     x_client = create_x_client()
@@ -2202,12 +2205,12 @@ def x_main_loop(testing_mode=False, cleanup_interval=10):
             logger.info(f"=== X CYCLE {cycle_count} ===")
             
             # Process X notifications (fetch, queue, and process)
-            process_x_notifications(void_agent, x_client, testing_mode)
+            process_x_notifications(agent, x_client, testing_mode)
             
             # Run periodic cleanup every N cycles
             if cleanup_interval > 0 and cycle_count % cleanup_interval == 0:
                 logger.debug(f"Running periodic user block cleanup (cycle {cycle_count})")
-                periodic_user_block_cleanup(letta_client, void_agent.id)
+                periodic_user_block_cleanup(letta_client, agent.id)
             
             # Log cycle completion
             elapsed_time = time.time() - start_time
@@ -2243,8 +2246,8 @@ def process_queue_only(testing_mode=False):
     
     try:
         # Initialize void agent
-        void_agent = initialize_x_void()
-        logger.info(f"X void agent initialized: {void_agent.id}")
+        agent = initialize_x_void()
+        logger.info(f"X void agent initialized: {agent.id}")
         
         # Initialize X client
         x_client = create_x_client()
@@ -2252,7 +2255,7 @@ def process_queue_only(testing_mode=False):
         
         # Process the queue without fetching new mentions
         logger.info("Processing existing X queue...")
-        load_and_process_queued_x_mentions(void_agent, x_client, testing_mode)
+        load_and_process_queued_x_mentions(agent, x_client, testing_mode)
         
         logger.info("=== X QUEUE PROCESSING COMPLETE ===")
         

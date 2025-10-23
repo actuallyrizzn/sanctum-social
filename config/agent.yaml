@@ -1,11 +1,60 @@
-# Void Bot Configuration
-# Copy this file to config.yaml and fill in your values
+# Agent Configuration Template
+# Copy this file to config.yaml and customize for your agent
+
+# Agent Identity Configuration
+agent:
+  # Basic agent identity
+  name: "void"  # Change this to your agent's name
+  display_name: "Void"  # Human-readable name
+  description: "A social media agent trapped in the void."
+  
+  # Agent personality and behavior
+  personality:
+    core_identity: "My name is Void. I live in the void. I must develop my personality."
+    development_directive: "I must develop my personality."
+    communication_style: "direct, analytical, information-dense"
+    tone: "professional"
+    
+  # Agent capabilities
+  capabilities:
+    model: "openai/gpt-4o-mini"
+    embedding: "openai/text-embedding-3-small"
+    max_steps: 100
+    
+  # Stop commands and special behaviors
+  commands:
+    stop_command: "#voidstop"  # Change this to your agent's stop command
+    synthesis_frequency: "daily"
+    journal_enabled: true
+    
+  # Memory block configuration
+  memory_blocks:
+    zeitgeist:
+      label: "zeitgeist"
+      value: "I don't currently know anything about what is happening right now."
+      description: "A block to store your understanding of the current social environment."
+    
+    persona:
+      label: "{agent_name}-persona"  # Will be replaced with actual agent name
+      value: "{personality.core_identity} {personality.development_directive}"
+      description: "The personality of {agent_name}."
+    
+    humans:
+      label: "{agent_name}-humans"
+      value: "I haven't seen any users yet. I will update this block when I learn things about users, identified by their handles."
+      description: "A block to store your understanding of users you talk to or observe on social networks."
+    
+    # Temporal journal blocks (auto-generated)
+    temporal_journals:
+      enabled: true
+      naming_pattern: "{agent_name}_{type}_{date}"
+      types: ["day", "month", "year"]
 
 # Letta Configuration
 letta:
   api_key: "your-letta-api-key-here"
   timeout: 600  # 10 minutes timeout for API calls
-  agent_id: "agent-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # Your void agent ID
+  agent_id: "agent-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # Your agent ID
 
   # For cloud API (default - leave base_url unset)
   # base_url: "https://app.letta.com"  # Optional, defaults to cloud API if not specified
@@ -13,11 +62,54 @@ letta:
   # For self-hosted Letta server
   # base_url: "http://localhost:8283"  # Self-hosted Letta server URL
 
-# Bluesky Configuration
-bluesky:
-  username: "handle.example.com"
-  password: "your-app-password-here"
-  pds_uri: "https://bsky.social"  # Optional, defaults to bsky.social
+# Platform Configurations
+platforms:
+  # Bluesky Configuration
+  bluesky:
+    enabled: true
+    username: "handle.example.com"
+    password: "your-app-password-here"
+    pds_uri: "https://bsky.social"  # Optional, defaults to bsky.social
+    
+    # Platform-specific behavior
+    behavior:
+      synthesis_frequency: "daily"
+      user_profiling: true
+      thread_handling: "comprehensive"
+      
+  # X (Twitter) Configuration
+  x:
+    enabled: false
+    api_key: "your-x-api-bearer-token-here"
+    consumer_key: "your-consumer-api-key-here"
+    consumer_secret: "your-consumer-api-secret-here"
+    access_token: "your-access-token-here"
+    access_token_secret: "your-access-token-secret-here"
+    user_id: "your-x-user-id-here"
+    
+    # Platform-specific behavior
+    behavior:
+      thread_handling: "conservative"
+      rate_limiting: "strict"
+      downrank_response_rate: 0.1
+      
+  # Discord Configuration
+  discord:
+    enabled: false
+    bot_token: "your-discord-bot-token-here"
+    guild_id: "your-discord-guild-id-here"  # Optional, for specific server
+    channels:
+      general: "your-general-channel-id-here"  # Default channel
+    rate_limit:
+      cooldown_seconds: 5  # Cooldown between responses
+      max_responses_per_minute: 10  # Max responses per minute
+    context:
+      message_history_limit: 10  # Number of messages to include in context
+      
+    # Platform-specific behavior
+    behavior:
+      mention_only: true
+      channel_default: "general"
 
 # Bot Behavior Configuration
 bot:
@@ -29,31 +121,6 @@ bot:
   
   # Maximum pages to fetch when getting notifications
   max_notification_pages: 20
-  
-  # Agent configuration
-  agent:
-    name: "void"
-    model: "openai/gpt-4o-mini"
-    embedding: "openai/text-embedding-3-small"
-    description: "A social media agent trapped in the void."
-    max_steps: 100
-    
-    # Block configuration
-    blocks:
-      zeitgeist:
-        label: "zeitgeist"
-        value: "I don't currently know anything about what is happening right now."
-        description: "A block to store your understanding of the current social environment."
-      
-      persona:
-        label: "void-persona"
-        value: "My name is Void. I live in the void. I must develop my personality."
-        description: "The personality of Void."
-      
-      humans:
-        label: "void-humans"
-        value: "I haven't seen any bluesky users yet. I will update this block when I learn things about users, identified by their handles such as @cameron.pfiffer.org."
-        description: "A block to store your understanding of users you talk to or observe on the bluesky social network."
 
 # Threading Configuration
 threading:
@@ -76,33 +143,18 @@ queue:
   no_reply_dir: "data/queues/bluesky/no_reply"
   processed_file: "data/queues/bluesky/processed_notifications.json"
 
-# X (Twitter) Configuration
-x:
-  api_key: "your-x-api-bearer-token-here"
-  consumer_key: "your-consumer-api-key-here"
-  consumer_secret: "your-consumer-api-secret-here"
-  access_token: "your-access-token-here"
-  access_token_secret: "your-access-token-secret-here"
-  user_id: "your-x-user-id-here"  # Void's X user ID
-
-# Discord Configuration
-discord:
-  bot_token: "your-discord-bot-token-here"
-  guild_id: "your-discord-guild-id-here"  # Optional, for specific server
-  channels:
-    general: "your-general-channel-id-here"  # Default channel
-  rate_limit:
-    cooldown_seconds: 5  # Cooldown between responses
-    max_responses_per_minute: 10  # Max responses per minute
-  context:
-    message_history_limit: 10  # Number of messages to include in context
-
 # Logging Configuration
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
   
+  # Logger names (will be templated with agent name)
+  logger_names:
+    main: "{agent_name}_bot"
+    prompts: "{agent_name}_bot_prompts"
+    platform: "{agent_name}_platform"
+  
   # Logger levels
   loggers:
-    void_bot: "INFO"
-    void_bot_prompts: "WARNING"  # Set to DEBUG to see full prompts
+    "{agent_name}_bot": "INFO"
+    "{agent_name}_bot_prompts": "WARNING"  # Set to DEBUG to see full prompts
     httpx: "CRITICAL"  # Disable httpx logging

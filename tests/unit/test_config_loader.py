@@ -35,7 +35,7 @@ class TestConfigLoader:
     def test_get_nested_key(self, mock_config_file):
         """Test getting a nested configuration key."""
         loader = ConfigLoader(str(mock_config_file))
-        result = loader.get("bot.agent.name")
+        result = loader.get("agent.name")
         assert result == "test-void"
     
     def test_get_missing_key_with_default(self, mock_config_file):
@@ -267,8 +267,9 @@ class TestDefaultConfig:
         default_config = get_default_config()
         
         # Check required sections exist
+        assert 'agent' in default_config
         assert 'letta' in default_config
-        assert 'bluesky' in default_config
+        assert 'platforms' in default_config
         assert 'bot' in default_config
         assert 'threading' in default_config
         assert 'queue' in default_config
@@ -279,16 +280,17 @@ class TestDefaultConfig:
         assert 'agent_id' in default_config['letta']
         assert 'timeout' in default_config['letta']
         
-        # Check required fields in bluesky section
-        assert 'username' in default_config['bluesky']
-        assert 'password' in default_config['bluesky']
-        assert 'pds_uri' in default_config['bluesky']
+        # Check required fields in platforms.bluesky section
+        assert 'bluesky' in default_config['platforms']
+        assert 'username' in default_config['platforms']['bluesky']
+        assert 'password' in default_config['platforms']['bluesky']
+        assert 'pds_uri' in default_config['platforms']['bluesky']
         
-        # Check bot agent blocks
-        assert 'blocks' in default_config['bot']['agent']
-        assert 'zeitgeist' in default_config['bot']['agent']['blocks']
-        assert 'persona' in default_config['bot']['agent']['blocks']
-        assert 'humans' in default_config['bot']['agent']['blocks']
+        # Check agent memory blocks
+        assert 'memory_blocks' in default_config['agent']
+        assert 'zeitgeist' in default_config['agent']['memory_blocks']
+        assert 'persona' in default_config['agent']['memory_blocks']
+        assert 'humans' in default_config['agent']['memory_blocks']
 
 
 class TestConfigLoaderWithDefaults:
@@ -304,7 +306,7 @@ class TestConfigLoaderWithDefaults:
             # Should use default config
             assert loader._config is not None
             assert loader._config['letta']['api_key'] == 'dev-letta-api-key'
-            assert loader._config['bluesky']['username'] == 'dev.handle.bsky.social'
+            assert loader._config['platforms']['bluesky']['username'] == 'dev.handle.bsky.social'
             
             # Should log warning
             mock_logger.warning.assert_called_once()
@@ -316,7 +318,7 @@ class TestConfigLoaderWithDefaults:
         # Should use file config, not defaults
         assert loader._config is not None
         assert loader._config['letta']['api_key'] == 'test-letta-api-key'  # From file
-        assert loader._config['bluesky']['username'] == 'test.bsky.social'  # From file
+        assert loader._config['platforms']['bluesky']['username'] == 'test.bsky.social'  # From file
 
 
 class TestConfigValidation:
@@ -354,8 +356,8 @@ class TestConfigValidation:
         assert len(issues) == 2
         assert 'letta' in issues
         assert 'agent_id' in issues['letta']
-        assert 'bluesky' in issues
-        assert 'password' in issues['bluesky']
+        assert 'platforms.bluesky' in issues
+        assert 'password' in issues['platforms.bluesky']
     
     def test_is_config_valid_true(self, mock_config_file):
         """Test is_config_valid returns True for valid config."""

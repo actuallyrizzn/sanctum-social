@@ -17,7 +17,7 @@ from utils.utils import (
     upsert_block,
     upsert_agent
 )
-from core.config import get_letta_config
+from core.config import get_letta_config, get_config, generate_synthesis_prompt, generate_temporal_block_labels, setup_logging_from_config, get_logger_names_config
 
 from . import utils as bsky_utils
 from .tools.blocks import attach_user_blocks, detach_user_blocks
@@ -46,7 +46,14 @@ def extract_handles_from_data(data):
 
 # Initialize logging early to prevent NoneType errors
 import logging
-logger = logging.getLogger("void_bot")
+
+# Get logger names from configuration
+config = get_config()
+logger_names = get_logger_names_config(config._config)
+main_logger_name = logger_names.get("main", "agent_bot")
+prompt_logger_name = logger_names.get("prompts", "agent_bot_prompts")
+
+logger = logging.getLogger(main_logger_name)
 logger.setLevel(logging.INFO)
 
 # Create a simple handler if none exists
@@ -56,7 +63,7 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-prompt_logger = logging.getLogger("void_bot.prompts")
+prompt_logger = logging.getLogger(prompt_logger_name)
 prompt_logger.setLevel(logging.WARNING)
 # Simple text formatting (Rich no longer used)
 SHOW_REASONING = False
@@ -165,8 +172,8 @@ def export_agent_state(client, agent, skip_git=False):
     except Exception as e:
         logger.error(f"Failed to export agent: {e}")
 
-def initialize_void():
-    logger.info("Starting void agent initialization...")
+def initialize_agent():
+    logger.info("Starting agent initialization...")
 
     # Load configuration when needed
     letta_config = get_letta_config()
@@ -185,37 +192,37 @@ def initialize_void():
     agent_id = letta_config['agent_id']
     
     try:
-        void_agent = client.agents.retrieve(agent_id=agent_id)
-        logger.info(f"Successfully loaded void agent: {void_agent.name} ({agent_id})")
+        agent = client.agents.retrieve(agent_id=agent_id)
+        logger.info(f"Successfully loaded agent: {agent.name} ({agent_id})")
     except Exception as e:
-        logger.error(f"Failed to load void agent {agent_id}: {e}")
+        logger.error(f"Failed to load agent {agent_id}: {e}")
         logger.error("Please ensure the agent_id in config.yaml is correct")
         raise e
     
     # Export agent state
     logger.info("Exporting agent state...")
-    export_agent_state(client, void_agent, skip_git=SKIP_GIT)
+    export_agent_state(client, agent, skip_git=SKIP_GIT)
     
     # Log agent details
-    logger.info(f"Void agent details - ID: {void_agent.id}")
-    logger.info(f"Agent name: {void_agent.name}")
-    if hasattr(void_agent, 'llm_config'):
-        logger.info(f"Agent model: {void_agent.llm_config.model}")
-    if hasattr(void_agent, 'project_id') and void_agent.project_id:
-        logger.info(f"Agent project_id: {void_agent.project_id}")
-    if hasattr(void_agent, 'tools'):
-        logger.info(f"Agent has {len(void_agent.tools)} tools")
-        for tool in void_agent.tools[:3]:  # Show first 3 tools
+    logger.info(f"Agent details - ID: {agent.id}")
+    logger.info(f"Agent name: {agent.name}")
+    if hasattr(agent, 'llm_config'):
+        logger.info(f"Agent model: {agent.llm_config.model}")
+    if hasattr(agent, 'project_id') and agent.project_id:
+        logger.info(f"Agent project_id: {agent.project_id}")
+    if hasattr(agent, 'tools'):
+        logger.info(f"Agent has {len(agent.tools)} tools")
+        for tool in agent.tools[:3]:  # Show first 3 tools
             logger.info(f"  - Tool: {tool.name} (type: {tool.tool_type})")
 
-    return void_agent
+    return agent
 
 
-def process_mention(void_agent, atproto_client, notification_data, queue_filepath=None, testing_mode=False):
+def process_mention(agent, atproto_client, notification_data, queue_filepath=None, testing_mode=False):
     """Process a mention and generate a reply using the Letta agent.
     
     Args:
-        void_agent: The Letta agent instance
+        agent: The Letta agent instance
         atproto_client: The AT Protocol client
         notification_data: The notification data dictionary
         queue_filepath: Optional Path object to the queue file (for cleanup on halt)
@@ -283,14 +290,16 @@ def process_mention(void_agent, atproto_client, notification_data, queue_filepat
             thread_context = thread_to_yaml_string(thread)
             logger.debug(f"Thread context generated, length: {len(thread_context)} characters")
             
-            # Check if #voidstop appears anywhere in the thread
-            if "#voidstop" in thread_context.lower():
-                logger.info("Found #voidstop in thread context, skipping this mention")
+            # Check if stop command appears anywhere in the thread
+            config = get_config()
+            stop_command = config.get_stop_command()
+            if stop_command in thread_context.lower():
+                logger.info(f"Found {stop_command} in thread context, skipping this mention")
                 return True  # Return True to remove from queue
             
             # Also check the mention text directly
-            if "#voidstop" in mention_text.lower():
-                logger.info("Found #voidstop in mention text, skipping this mention")
+            if stop_command in mention_text.lower():
+                logger.info(f"Found {stop_command} in mention text, skipping this mention")
                 return True  # Return True to remove from queue
             
             # Create a more informative preview by extracting meaningful content
@@ -360,7 +369,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
         
         try:
             # Check for known bots in thread
-            bot_check_result = check_known_bots(unique_handles, void_agent)
+            bot_check_result = check_known_bots(unique_handles, agent)
             bot_check_data = json.loads(bot_check_result)
             
             # TEMPORARILY DISABLED: Bot detection causing issues with normal users
@@ -388,7 +397,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
         if unique_handles:
             try:
                 logger.debug(f"Attaching user blocks for handles: {unique_handles}")
-                attach_result = attach_user_blocks(unique_handles, void_agent)
+                attach_result = attach_user_blocks(unique_handles, agent)
                 attached_handles = unique_handles  # Track successfully attached handles
                 logger.debug(f"Attach result: {attach_result}")
             except Exception as attach_error:
@@ -425,7 +434,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
             
             # Use streaming to avoid 524 timeout errors
             message_stream = client.agents.messages.create_stream(
-                agent_id=void_agent.id,
+                agent_id=agent.id,
                 messages=[{"role": "user", "content": prompt}],
                 stream_tokens=False,  # Step streaming only (faster than token streaming)
                 max_steps=100
@@ -713,7 +722,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
                     logger.error("Please use add_post_to_bluesky_reply_thread instead.")
                     logger.error("Update the agent's tools using register_tools.py")
                     # Export agent state before terminating
-                    export_agent_state(CLIENT, void_agent, skip_git=SKIP_GIT)
+                    export_agent_state(CLIENT, agent, skip_git=SKIP_GIT)
                     logger.info("=== BOT TERMINATED DUE TO DEPRECATED TOOL USE ===")
                     exit(1)
         
@@ -761,7 +770,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
                             save_processed_notifications(processed_uris)
                     
                     # Export agent state before terminating
-                    export_agent_state(CLIENT, void_agent, skip_git=SKIP_GIT)
+                    export_agent_state(CLIENT, agent, skip_git=SKIP_GIT)
                     
                     # Exit the program
                     logger.info("=== BOT TERMINATED BY AGENT ===")
@@ -774,7 +783,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
                     logger.error("Please use add_post_to_bluesky_reply_thread instead.")
                     logger.error("Update the agent's tools using register_tools.py")
                     # Export agent state before terminating
-                    export_agent_state(CLIENT, void_agent, skip_git=SKIP_GIT)
+                    export_agent_state(CLIENT, agent, skip_git=SKIP_GIT)
                     logger.info("=== BOT TERMINATED DUE TO DEPRECATED TOOL USE ===")
                     exit(1)
                 
@@ -939,7 +948,7 @@ To reply, use the add_post_to_bluesky_reply_thread tool:
         if 'attached_handles' in locals() and attached_handles:
             try:
                 logger.info(f"Detaching user blocks for handles: {attached_handles}")
-                detach_result = detach_user_blocks(attached_handles, void_agent)
+                detach_result = detach_user_blocks(attached_handles, agent)
                 logger.debug(f"Detach result: {detach_result}")
             except Exception as detach_error:
                 logger.warning(f"Failed to detach user blocks: {detach_error}")
@@ -1057,7 +1066,7 @@ def save_notification_to_queue(notification, is_priority=None):
         return False
 
 
-def load_and_process_queued_notifications(void_agent, atproto_client, testing_mode=False):
+def load_and_process_queued_notifications(agent, atproto_client, testing_mode=False):
     """Load and process all notifications from the queue in priority order."""
     try:
         # Get all JSON files in queue directory (excluding processed_notifications.json)
@@ -1136,11 +1145,11 @@ def load_and_process_queued_notifications(void_agent, atproto_client, testing_mo
                 # Process based on type using dict data directly
                 success = False
                 if notif_data['reason'] == "mention":
-                    success = process_mention(void_agent, atproto_client, notif_data, queue_filepath=filepath, testing_mode=testing_mode)
+                    success = process_mention(agent, atproto_client, notif_data, queue_filepath=filepath, testing_mode=testing_mode)
                     if success:
                         message_counters['mentions'] += 1
                 elif notif_data['reason'] == "reply":
-                    success = process_mention(void_agent, atproto_client, notif_data, queue_filepath=filepath, testing_mode=testing_mode)
+                    success = process_mention(agent, atproto_client, notif_data, queue_filepath=filepath, testing_mode=testing_mode)
                     if success:
                         message_counters['replies'] += 1
                 elif notif_data['reason'] == "follow":
@@ -1161,7 +1170,7 @@ def load_and_process_queued_notifications(void_agent, atproto_client, testing_mo
                     client = Letta(**client_params)
                     
                     client.agents.messages.create(
-                        agent_id = void_agent.id,
+                        agent_id = agent.id,
                         messages = [{"role":"user", "content": follow_message}]
                     )
                     success = True  # Follow updates are always successful
@@ -1390,7 +1399,7 @@ def fetch_and_queue_new_notifications(atproto_client):
         return 0
 
 
-def process_notifications(void_agent, atproto_client, testing_mode=False):
+def process_notifications(agent, atproto_client, testing_mode=False):
     """Fetch new notifications, queue them, and process the queue."""
     try:
         # Fetch and queue new notifications
@@ -1400,7 +1409,7 @@ def process_notifications(void_agent, atproto_client, testing_mode=False):
             logger.info(f"Found {new_count} new notifications to process")
 
         # Now process the entire queue (old + new notifications)
-        load_and_process_queued_notifications(void_agent, atproto_client, testing_mode)
+        load_and_process_queued_notifications(agent, atproto_client, testing_mode)
 
     except Exception as e:
         logger.error(f"Error processing notifications: {e}")
@@ -1427,29 +1436,10 @@ def send_synthesis_message(client: Letta, agent_id: str, atproto_client=None) ->
         if not success:
             logger.warning("Failed to attach some temporal blocks, continuing with synthesis anyway")
         
-        # Create enhanced synthesis prompt
+        # Create enhanced synthesis prompt using configuration
         today = date.today()
-        synthesis_prompt = f"""Time for synthesis and reflection.
-
-You have access to temporal journal blocks for recording your thoughts and experiences:
-- void_day_{today.strftime('%Y_%m_%d')}: Today's journal ({today.strftime('%B %d, %Y')})
-- void_month_{today.strftime('%Y_%m')}: This month's journal ({today.strftime('%B %Y')})
-- void_year_{today.year}: This year's journal ({today.year})
-
-These journal blocks are attached temporarily for this synthesis session. Use them to:
-1. Record significant interactions and insights from recent experiences
-2. Track patterns in conversations and user behaviors
-3. Note your evolving understanding of the digital social environment
-4. Reflect on your growth and changes in perspective
-5. Document memorable moments or interesting discoveries
-
-The journal entries should be cumulative - add to existing content rather than replacing it.
-Consider both immediate experiences (daily) and longer-term patterns (monthly/yearly).
-
-After recording in your journals, synthesize your recent experiences into your core memory blocks
-(zeitgeist, void-persona, void-humans) as you normally would.
-
-Begin your synthesis and journaling now."""
+        config = get_config()
+        synthesis_prompt = generate_synthesis_prompt(config._config, today)
         
         logger.info("🧠 Sending enhanced synthesis prompt to agent")
         
@@ -1627,12 +1617,9 @@ def attach_temporal_blocks(client: Letta, agent_id: str) -> tuple:
     try:
         today = date.today()
         
-        # Generate temporal block labels
-        day_label = f"void_day_{today.strftime('%Y_%m_%d')}"
-        month_label = f"void_month_{today.strftime('%Y_%m')}"
-        year_label = f"void_year_{today.year}"
-        
-        temporal_labels = [day_label, month_label, year_label]
+        # Generate temporal block labels using configuration
+        config = get_config()
+        temporal_labels = generate_temporal_block_labels(config._config, today)
         attached_labels = []
         
         # Get current blocks attached to agent
@@ -1716,14 +1703,11 @@ def detach_temporal_blocks(client: Letta, agent_id: str, labels_to_detach: list 
         bool: Success status
     """
     try:
-        # If no specific labels provided, generate today's labels
+        # If no specific labels provided, generate today's labels using configuration
         if labels_to_detach is None:
             today = date.today()
-            labels_to_detach = [
-                f"void_day_{today.strftime('%Y_%m_%d')}",
-                f"void_month_{today.strftime('%Y_%m')}",
-                f"void_year_{today.year}"
-            ]
+            config = get_config()
+            labels_to_detach = generate_temporal_block_labels(config._config, today)
         
         # Get current blocks and build label to ID mapping
         current_blocks = client.agents.blocks.list(agent_id=agent_id)
@@ -1814,12 +1798,12 @@ def main():
     global logger, prompt_logger, console
     # Only reconfigure if not already initialized
     if logger.level == logging.NOTSET:
-        logger = logging.getLogger("void_bot")
+        logger = logging.getLogger(main_logger_name)
         logger.setLevel(logging.INFO)
     
     # Create a separate logger for prompts (set to WARNING to hide by default)
     if prompt_logger.level == logging.NOTSET:
-        prompt_logger = logging.getLogger("void_bot.prompts")
+        prompt_logger = logging.getLogger(prompt_logger_name)
         if args.reasoning:
             prompt_logger.setLevel(logging.INFO)  # Show reasoning when --reasoning is used
         else:
@@ -1862,8 +1846,8 @@ def main():
     global start_time
     start_time = time.time()
     logger.info("=== STARTING VOID BOT ===")
-    void_agent = initialize_void()
-    logger.info(f"Void agent initialized: {void_agent.id}")
+    agent = initialize_agent()
+    logger.info(f"Agent initialized: {agent.id}")
     
     # Initialize notification database
     global NOTIFICATION_DB
@@ -1886,14 +1870,14 @@ def main():
     logger.info("Configuring tools for Bluesky platform...")
     try:
         from tool_manager import ensure_platform_tools
-        ensure_platform_tools('bluesky', void_agent.id)
+        ensure_platform_tools('bluesky', agent.id)
     except Exception as e:
         logger.error(f"Failed to configure platform tools: {e}")
         logger.warning("Continuing with existing tool configuration")
     
     # Check if agent has required tools
-    if hasattr(void_agent, 'tools') and void_agent.tools:
-        tool_names = [tool.name for tool in void_agent.tools]
+    if hasattr(agent, 'tools') and agent.tools:
+        tool_names = [tool.name for tool in agent.tools]
         # Check for bluesky-related tools
         bluesky_tools = [name for name in tool_names if 'bluesky' in name.lower() or 'reply' in name.lower()]
         if not bluesky_tools:
@@ -1903,7 +1887,7 @@ def main():
 
     # Clean up all user blocks at startup
     logger.info("🧹 Cleaning up user blocks at startup...")
-    periodic_user_block_cleanup(CLIENT, void_agent.id)
+    periodic_user_block_cleanup(CLIENT, agent.id)
     
     # Initialize Bluesky client (needed for both notification processing and synthesis acks/posts)
     if not SYNTHESIS_ONLY:
@@ -1934,7 +1918,7 @@ def main():
             try:
                 # Send synthesis message immediately on first run
                 logger.info("🧠 Sending synthesis message")
-                send_synthesis_message(CLIENT, void_agent.id, atproto_client)
+                send_synthesis_message(CLIENT, agent.id, atproto_client)
                 
                 # Wait for next interval
                 logger.info(f"Waiting {SYNTHESIS_INTERVAL} seconds until next synthesis...")
@@ -1966,7 +1950,7 @@ def main():
     while True:
         try:
             cycle_count += 1
-            process_notifications(void_agent, atproto_client, TESTING_MODE)
+            process_notifications(agent, atproto_client, TESTING_MODE)
             
             # Check if synthesis interval has passed
             if SYNTHESIS_INTERVAL > 0:
@@ -1974,13 +1958,13 @@ def main():
                 global last_synthesis_time
                 if current_time - last_synthesis_time >= SYNTHESIS_INTERVAL:
                     logger.info(f"⏰ {SYNTHESIS_INTERVAL/60:.1f} minutes have passed, triggering synthesis")
-                    send_synthesis_message(CLIENT, void_agent.id, atproto_client)
+                    send_synthesis_message(CLIENT, agent.id, atproto_client)
                     last_synthesis_time = current_time
             
             # Run periodic cleanup every N cycles
             if CLEANUP_INTERVAL > 0 and cycle_count % CLEANUP_INTERVAL == 0:
                 logger.debug(f"Running periodic user block cleanup (cycle {cycle_count})")
-                periodic_user_block_cleanup(CLIENT, void_agent.id)
+                periodic_user_block_cleanup(CLIENT, agent.id)
                 
                 # Also check database health when doing cleanup
                 if NOTIFICATION_DB:

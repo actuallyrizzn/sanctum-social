@@ -90,6 +90,49 @@ def temp_dir():
 def mock_config():
     """Provide a mock configuration for testing."""
     return {
+        "agent": {
+            "name": "test-void",
+            "display_name": "Test Void",
+            "description": "Test void agent",
+            "personality": {
+                "core_identity": "My name is Test Void. I am a test agent.",
+                "development_directive": "I must develop my test personality.",
+                "communication_style": "direct, analytical, information-dense",
+                "tone": "professional"
+            },
+            "capabilities": {
+                "model": "openai/gpt-4o-mini",
+                "embedding": "openai/text-embedding-3-small",
+                "max_steps": 10
+            },
+            "commands": {
+                "stop_command": "#testvoidstop",
+                "synthesis_frequency": "daily",
+                "journal_enabled": True
+            },
+            "memory_blocks": {
+                "zeitgeist": {
+                    "label": "zeitgeist",
+                    "value": "Test zeitgeist",
+                    "description": "Test zeitgeist block"
+                },
+                "persona": {
+                    "label": "test-void-persona",
+                    "value": "Test persona",
+                    "description": "Test persona block"
+                },
+                "humans": {
+                    "label": "test-void-humans",
+                    "value": "I haven't seen any users yet. I will update this block when I learn things about users, identified by their handles.",
+                    "description": "A block to store your understanding of users you talk to or observe on social networks."
+                },
+                "temporal_journals": {
+                    "enabled": True,
+                    "naming_pattern": "test-void_{type}_{date}",
+                    "types": ["day", "month", "year"]
+                }
+            }
+        },
         "letta": {
             "api_key": "test-letta-api-key",
             "project_id": "test-project-id",
@@ -97,42 +140,56 @@ def mock_config():
             "timeout": 30,
             "base_url": None
         },
-        "bluesky": {
-            "username": "test.bsky.social",
-            "password": "test-app-password",
-            "pds_uri": "https://bsky.social"
-        },
-        "x": {
-            "api_key": "test-x-api-key",
-            "consumer_key": "test-consumer-key",
-            "consumer_secret": "test-consumer-secret",
-            "access_token": "test-access-token",
-            "access_token_secret": "test-access-token-secret",
-            "user_id": "1234567890"
+        "platforms": {
+            "bluesky": {
+                "enabled": True,
+                "username": "test.bsky.social",
+                "password": "test-app-password",
+                "pds_uri": "https://bsky.social",
+                "behavior": {
+                    "synthesis_frequency": "daily",
+                    "user_profiling": True,
+                    "thread_handling": "comprehensive"
+                }
+            },
+            "x": {
+                "enabled": False,
+                "api_key": "test-x-api-key",
+                "consumer_key": "test-consumer-key",
+                "consumer_secret": "test-consumer-secret",
+                "access_token": "test-access-token",
+                "access_token_secret": "test-access-token-secret",
+                "user_id": "1234567890",
+                "behavior": {
+                    "thread_handling": "conservative",
+                    "rate_limiting": "strict",
+                    "downrank_response_rate": 0.1
+                }
+            },
+            "discord": {
+                "enabled": False,
+                "bot_token": "test-discord-token",
+                "guild_id": "test-guild-id",
+                "channels": {
+                    "general": "test-general-channel"
+                },
+                "rate_limit": {
+                    "cooldown_seconds": 5,
+                    "max_responses_per_minute": 10
+                },
+                "context": {
+                    "message_history_limit": 10
+                },
+                "behavior": {
+                    "mention_only": True,
+                    "channel_default": "general"
+                }
+            }
         },
         "bot": {
             "fetch_notifications_delay": 5,
             "max_processed_notifications": 100,
-            "max_notification_pages": 5,
-            "agent": {
-                "name": "test-void",
-                "model": "openai/gpt-4o-mini",
-                "embedding": "openai/text-embedding-3-small",
-                "description": "Test void agent",
-                "max_steps": 10,
-                "blocks": {
-                    "zeitgeist": {
-                        "label": "zeitgeist",
-                        "value": "Test zeitgeist",
-                        "description": "Test zeitgeist block"
-                    },
-                    "persona": {
-                        "label": "void-persona",
-                        "value": "Test persona",
-                        "description": "Test persona block"
-                    }
-                }
-            }
+            "max_notification_pages": 5
         },
         "queue": {
             "priority_users": ["test.user.bsky.social"],
@@ -148,9 +205,14 @@ def mock_config():
         },
         "logging": {
             "level": "DEBUG",
+            "logger_names": {
+                "main": "test-void_bot",
+                "prompts": "test-void_bot_prompts",
+                "platform": "test-void_platform"
+            },
             "loggers": {
-                "void_bot": "DEBUG",
-                "void_bot_prompts": "DEBUG",
+                "test-void_bot": "DEBUG",
+                "test-void_bot_prompts": "DEBUG",
                 "httpx": "CRITICAL"
             }
         }

@@ -1,4 +1,5 @@
 import os
+from core.config import get_config, get_logger_names_config
 import logging
 import json
 import hashlib
@@ -15,7 +16,14 @@ from utils.utils import upsert_block, upsert_agent
 from platforms.bluesky.tools.blocks import attach_user_blocks, detach_user_blocks
 
 # Initialize logging early to prevent NoneType errors
-logger = logging.getLogger("void_bot")
+
+# Get logger names from configuration
+config = get_config()
+logger_names = get_logger_names_config(config._config)
+main_logger_name = logger_names.get("main", "agent_bot")
+prompt_logger_name = logger_names.get("prompts", "agent_bot_prompts")
+
+logger = logging.getLogger(main_logger_name)
 logger.setLevel(logging.INFO)
 
 # Create a simple handler if none exists
@@ -25,7 +33,7 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-prompt_logger = logging.getLogger("void_bot.prompts")
+prompt_logger = logging.getLogger(prompt_logger_name)
 prompt_logger.setLevel(logging.WARNING)
 
 # Discord-specific file paths
