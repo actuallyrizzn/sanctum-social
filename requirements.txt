@@ -3,6 +3,7 @@ anyio==4.9.0
 atproto==0.0.61
 certifi==2025.7.14
 cffi==1.17.1
+discord.py==2.3.2
 charset-normalizer==3.4.2
 click==8.2.1
 cryptography==45.0.5

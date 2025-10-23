@@ -85,6 +85,18 @@ x:
   access_token_secret: "your-access-token-secret-here"
   user_id: "your-x-user-id-here"  # Void's X user ID
 
+# Discord Configuration
+discord:
+  bot_token: "your-discord-bot-token-here"
+  guild_id: "your-discord-guild-id-here"  # Optional, for specific server
+  channels:
+    general: "your-general-channel-id-here"  # Default channel
+  rate_limit:
+    cooldown_seconds: 5  # Cooldown between responses
+    max_responses_per_minute: 10  # Max responses per minute
+  context:
+    message_history_limit: 10  # Number of messages to include in context
+
 # Logging Configuration
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
