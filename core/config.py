@@ -144,6 +144,53 @@ def get_temporal_journal_config(config: Dict[str, Any]) -> Dict[str, Any]:
     return templated_config
 
 
+def get_file_paths_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract and template file paths configuration."""
+    file_paths = config.get("agent.file_paths", {})
+    agent_name = config.get("agent.name", "agent")
+    
+    # Template file paths with agent name
+    templated_paths = {}
+    for key, value in file_paths.items():
+        if isinstance(value, str):
+            templated_paths[key] = value.format(agent_name=agent_name)
+        else:
+            templated_paths[key] = value
+    
+    return templated_paths
+
+def get_platform_queue_dir(config: Dict[str, Any], platform: str) -> str:
+    """Get queue directory for a specific platform."""
+    file_paths = get_file_paths_config(config)
+    queue_base_dir = file_paths.get("queue_base_dir", "data/queues")
+    return f"{queue_base_dir}/{platform}"
+
+def get_platform_cache_dir(config: Dict[str, Any], platform: str) -> str:
+    """Get cache directory for a specific platform."""
+    file_paths = get_file_paths_config(config)
+    cache_base_dir = file_paths.get("cache_base_dir", "data/cache")
+    return f"{cache_base_dir}/{platform}"
+
+def get_archive_file_path(config: Dict[str, Any], timestamp: str) -> str:
+    """Get archive file path with timestamp."""
+    file_paths = get_file_paths_config(config)
+    agent_name = config.get("agent.name", "agent")
+    archive_dir = file_paths.get("archive_dir", "data/agent/archive")
+    pattern = file_paths.get("archive_file_pattern", "{agent_name}_{timestamp}.af")
+    filename = pattern.format(agent_name=agent_name, timestamp=timestamp)
+    return f"{archive_dir}/{filename}"
+
+def get_current_agent_file_path(config: Dict[str, Any]) -> str:
+    """Get current agent file path."""
+    file_paths = get_file_paths_config(config)
+    return file_paths.get("current_file", "data/agent/current.af")
+
+def get_agent_data_dir(config: Dict[str, Any]) -> str:
+    """Get agent data directory."""
+    file_paths = get_file_paths_config(config)
+    return file_paths.get("agent_dir", "data/agent")
+
+
 def get_default_config() -> Dict[str, Any]:
     """
     Get default configuration for development/testing.
@@ -369,6 +416,30 @@ class ConfigLoader:
     def get_temporal_journal_config(self) -> Dict[str, Any]:
         """Get temporal journal configuration."""
         return get_temporal_journal_config(self._config)
+    
+    def get_file_paths_config(self) -> Dict[str, Any]:
+        """Get file paths configuration."""
+        return get_file_paths_config(self._config)
+    
+    def get_platform_queue_dir(self, platform: str) -> str:
+        """Get queue directory for a specific platform."""
+        return get_platform_queue_dir(self._config, platform)
+    
+    def get_platform_cache_dir(self, platform: str) -> str:
+        """Get cache directory for a specific platform."""
+        return get_platform_cache_dir(self._config, platform)
+    
+    def get_archive_file_path(self, timestamp: str) -> str:
+        """Get archive file path with timestamp."""
+        return get_archive_file_path(self._config, timestamp)
+    
+    def get_current_agent_file_path(self) -> str:
+        """Get current agent file path."""
+        return get_current_agent_file_path(self._config)
+    
+    def get_agent_data_dir(self) -> str:
+        """Get agent data directory."""
+        return get_agent_data_dir(self._config)
     
     def get_stop_command(self) -> str:
         """Get the agent's stop command."""
@@ -729,6 +800,115 @@ def generate_temporal_block_labels(config: Dict[str, Any], today: datetime) -> L
         labels.append(label)
     
     return labels
+
+
+def generate_follow_message(config: Dict[str, Any], platform: str, author_handle: str, author_display_name: str) -> str:
+    """
+    Generate a templated follow notification message using agent configuration.
+    
+    Args:
+        config: Full configuration dictionary
+        platform: Platform name (bluesky, x, discord)
+        author_handle: Handle of the user who followed
+        author_display_name: Display name of the user
+        
+    Returns:
+        Templated follow message
+    """
+    agent_config = config.get("agent", {})
+    agent_name = agent_config.get("name", "agent")
+    display_name = agent_config.get("display_name", agent_name)
+    
+    # Platform-specific follow message
+    if platform == "bluesky":
+        platform_name = "Bluesky"
+    elif platform == "x":
+        platform_name = "X (Twitter)"
+    elif platform == "discord":
+        platform_name = "Discord"
+    else:
+        platform_name = platform.title()
+    
+    follow_update = f"@{author_handle} ({author_display_name}) started following you on {platform_name}."
+    follow_message = f"Update: {follow_update}"
+    
+    return follow_message
+
+
+def generate_mention_prompt(config: Dict[str, Any], platform: str, author_handle: str, author_name: str, mention_text: str, thread_context: str) -> str:
+    """
+    Generate a templated mention prompt using agent configuration.
+    
+    Args:
+        config: Full configuration dictionary
+        platform: Platform name (bluesky, x, discord)
+        author_handle: Handle of the user who mentioned the agent
+        author_name: Display name of the user
+        mention_text: The mention text
+        thread_context: YAML-formatted thread context
+        
+    Returns:
+        Templated mention prompt
+    """
+    agent_config = config.get("agent", {})
+    agent_name = agent_config.get("name", "agent")
+    display_name = agent_config.get("display_name", agent_name)
+    
+    # Get platform-specific behavior
+    platform_config = config.get("platforms", {}).get(platform, {})
+    behavior = platform_config.get("behavior", {})
+    
+    # Platform-specific instructions
+    if platform == "bluesky":
+        tool_instruction = "add_post_to_bluesky_reply_thread"
+        platform_name = "Bluesky"
+    elif platform == "x":
+        tool_instruction = "add_post_to_x_reply_thread"
+        platform_name = "X (Twitter)"
+    elif platform == "discord":
+        tool_instruction = "add_post_to_discord_reply_thread"
+        platform_name = "Discord"
+    else:
+        tool_instruction = "add_post_to_reply_thread"
+        platform_name = platform.title()
+    
+    # Get communication style preferences
+    personality = agent_config.get("personality", {})
+    communication_style = personality.get("communication_style", "direct, analytical, information-dense")
+    
+    # Build style instructions based on communication style
+    style_instructions = []
+    if "concise" in communication_style or "direct" in communication_style:
+        style_instructions.append("- Be concise when possible")
+    if "analytical" in communication_style:
+        style_instructions.append("- Provide analytical insights when relevant")
+    if "information-dense" in communication_style:
+        style_instructions.append("- Use structured multi-part answers when needed")
+    
+    style_guidance = "\n".join(style_instructions) if style_instructions else "- Be helpful and engaging"
+    
+    prompt = f"""You received a mention on {platform_name} from @{author_handle} ({author_name or author_handle}).
+
+MOST RECENT POST (the mention you're responding to):
+"{mention_text}"
+
+FULL THREAD CONTEXT:
+```yaml
+{thread_context}
+```
+
+The YAML above shows the complete conversation thread. The most recent post is the one mentioned above that you should respond to, but use the full thread context to understand the conversation flow.
+
+To reply, use the {tool_instruction} tool:
+- Each call creates one post (max 300 characters)
+- For most responses, a single call is sufficient
+- Only use multiple calls for threaded replies when:
+  * The topic requires extended explanation that cannot fit in 300 characters
+  * You're explicitly asked for a detailed/long response
+  * The conversation naturally benefits from a structured multi-part answer
+{style_guidance}"""
+
+    return prompt
 
 
 def setup_logging_from_config(config: Dict[str, Any]) -> None:

@@ -17,7 +17,7 @@ from utils.utils import (
     upsert_block,
     upsert_agent
 )
-from core.config import get_letta_config, get_config, generate_synthesis_prompt, generate_temporal_block_labels, setup_logging_from_config, get_logger_names_config
+from core.config import get_letta_config, get_config, generate_synthesis_prompt, generate_temporal_block_labels, setup_logging_from_config, get_logger_names_config, generate_mention_prompt, generate_follow_message
 
 from . import utils as bsky_utils
 from .tools.blocks import attach_user_blocks, detach_user_blocks
@@ -47,24 +47,35 @@ def extract_handles_from_data(data):
 # Initialize logging early to prevent NoneType errors
 import logging
 
-# Get logger names from configuration
-config = get_config()
-logger_names = get_logger_names_config(config._config)
-main_logger_name = logger_names.get("main", "agent_bot")
-prompt_logger_name = logger_names.get("prompts", "agent_bot_prompts")
+# Get logger names from configuration - lazy initialization
+def get_loggers():
+    """Get loggers with configurable names, falling back to defaults if config not available."""
+    try:
+        config = get_config()
+        logger_names = get_logger_names_config(config._config)
+        main_logger_name = logger_names.get("main", "agent_bot")
+        prompt_logger_name = logger_names.get("prompts", "agent_bot_prompts")
+    except Exception:
+        # Fallback to default logger names if config not available
+        main_logger_name = "agent_bot"
+        prompt_logger_name = "agent_bot_prompts"
+    
+    logger = logging.getLogger(main_logger_name)
+    logger.setLevel(logging.INFO)
+    
+    # Create a simple handler if none exists
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    
+    prompt_logger = logging.getLogger(prompt_logger_name)
+    prompt_logger.setLevel(logging.WARNING)
+    
+    return logger, prompt_logger
 
-logger = logging.getLogger(main_logger_name)
-logger.setLevel(logging.INFO)
-
-# Create a simple handler if none exists
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-prompt_logger = logging.getLogger(prompt_logger_name)
-prompt_logger.setLevel(logging.WARNING)
+logger, prompt_logger = get_loggers()
 # Simple text formatting (Rich no longer used)
 SHOW_REASONING = False
 last_archival_query = "archival memory search"
@@ -100,14 +111,22 @@ FETCH_NOTIFICATIONS_DELAY_SEC = 10  # Check every 10 seconds for faster response
 # Check for new notifications every N queue items
 CHECK_NEW_NOTIFICATIONS_EVERY_N_ITEMS = 2  # Check more frequently during processing
 
-# Queue directory
-QUEUE_DIR = Path("data/queues/bluesky")
+# Queue directory - now configurable
+def get_queue_paths():
+    """Get queue paths from config or use defaults."""
+    try:
+        config = get_config()
+        queue_dir = Path(config.get_platform_queue_dir("bluesky"))
+        return queue_dir, queue_dir / "errors", queue_dir / "no_reply", queue_dir / "processed_notifications.json"
+    except Exception:
+        # Fallback to default paths if config not available
+        queue_dir = Path("data/queues/bluesky")
+        return queue_dir, queue_dir / "errors", queue_dir / "no_reply", queue_dir / "processed_notifications.json"
+
+QUEUE_DIR, QUEUE_ERROR_DIR, QUEUE_NO_REPLY_DIR, PROCESSED_NOTIFICATIONS_FILE = get_queue_paths()
 QUEUE_DIR.mkdir(exist_ok=True, parents=True)
-QUEUE_ERROR_DIR = Path("data/queues/bluesky/errors")
 QUEUE_ERROR_DIR.mkdir(exist_ok=True, parents=True)
-QUEUE_NO_REPLY_DIR = Path("data/queues/bluesky/no_reply")
 QUEUE_NO_REPLY_DIR.mkdir(exist_ok=True, parents=True)
-PROCESSED_NOTIFICATIONS_FILE = Path("data/queues/bluesky/processed_notifications.json")
 
 # Maximum number of processed notifications to track
 MAX_PROCESSED_NOTIFICATIONS = 10000
@@ -141,8 +160,11 @@ def export_agent_state(client, agent, skip_git=False):
             logger.info("Exporting agent state (git staging disabled)")
         
         # Create directories if they don't exist
-        os.makedirs("data/agent/archive", exist_ok=True)
-        os.makedirs("data/agent", exist_ok=True)
+        config = get_config()
+        agent_data_dir = config.get_agent_data_dir()
+        archive_dir = config.get_file_paths_config().get("archive_dir", f"{agent_data_dir}/archive")
+        os.makedirs(archive_dir, exist_ok=True)
+        os.makedirs(agent_data_dir, exist_ok=True)
         
         # Export agent data
         logger.info(f"Exporting agent {agent.id}. This takes some time...")
@@ -150,12 +172,12 @@ def export_agent_state(client, agent, skip_git=False):
         
         # Save timestamped archive copy
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        archive_file = os.path.join("data/agent/archive", f"void_{timestamp}.af")
+        archive_file = config.get_archive_file_path(timestamp)
         with open(archive_file, 'w', encoding='utf-8') as f:
             json.dump(agent_data, f, indent=2, ensure_ascii=False)
         
         # Save current agent state
-        current_file = os.path.join("data/agent", "current.af")
+        current_file = config.get_current_agent_file_path()
         with open(current_file, 'w', encoding='utf-8') as f:
             json.dump(agent_data, f, indent=2, ensure_ascii=False)
         
@@ -187,8 +209,8 @@ def initialize_agent():
         client_params['base_url'] = letta_config['base_url']
     client = Letta(**client_params)
 
-    # Get the configured void agent by ID
-    logger.info("Loading void agent from config...")
+    # Get the configured agent by ID
+    logger.info("Loading agent from config...")
     agent_id = letta_config['agent_id']
     
     try:
@@ -333,27 +355,16 @@ def process_mention(agent, atproto_client, notification_data, queue_filepath=Non
             # Try to continue with a simple context
             thread_context = f"Error processing thread context: {str(yaml_error)}"
 
-        # Create a prompt for the Letta agent with thread context
-        prompt = f"""You received a mention on Bluesky from @{author_handle} ({author_name or author_handle}).
-
-MOST RECENT POST (the mention you're responding to):
-"{mention_text}"
-
-FULL THREAD CONTEXT:
-```yaml
-{thread_context}
-```
-
-The YAML above shows the complete conversation thread. The most recent post is the one mentioned above that you should respond to, but use the full thread context to understand the conversation flow.
-
-To reply, use the add_post_to_bluesky_reply_thread tool:
-- Each call creates one post (max 300 characters)
-- For most responses, a single call is sufficient
-- Only use multiple calls for threaded replies when:
-  * The topic requires extended explanation that cannot fit in 300 characters
-  * You're explicitly asked for a detailed/long response
-  * The conversation naturally benefits from a structured multi-part answer
-- Avoid unnecessary threads - be concise when possible"""
+        # Create a prompt for the Letta agent with thread context using configuration
+        config = get_config()
+        prompt = generate_mention_prompt(
+            config._config, 
+            "bluesky", 
+            author_handle, 
+            author_name or author_handle, 
+            mention_text, 
+            thread_context
+        )
 
         # Extract all handles from notification and thread data
         all_handles = set()
@@ -1155,8 +1166,7 @@ def load_and_process_queued_notifications(agent, atproto_client, testing_mode=Fa
                 elif notif_data['reason'] == "follow":
                     author_handle = notif_data['author']['handle']
                     author_display_name = notif_data['author'].get('display_name', 'no display name')
-                    follow_update = f"@{author_handle} ({author_display_name}) started following you."
-                    follow_message = f"Update: {follow_update}"
+                    follow_message = generate_follow_message(config._config, "bluesky", author_handle, author_display_name)
                     logger.info(f"Notifying agent about new follower: @{author_handle} | prompt: {len(follow_message)} chars")
                     
                     # Load configuration and create client when needed
@@ -1738,10 +1748,10 @@ def detach_temporal_blocks(client: Letta, agent_id: str, labels_to_detach: list 
 
 def main():
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Void Bot - Bluesky autonomous agent')
+    parser = argparse.ArgumentParser(description='Agent Bot - Bluesky autonomous agent')
     parser.add_argument('--test', action='store_true', help='Run in testing mode (no messages sent, queue files preserved)')
     parser.add_argument('--no-git', action='store_true', help='Skip git operations when exporting agent state')
-    parser.add_argument('--simple-logs', action='store_true', help='Use simplified log format (void - LEVEL - message)')
+    parser.add_argument('--simple-logs', action='store_true', help='Use simplified log format (agent - LEVEL - message)')
     # --rich option removed as we now use simple text formatting
     parser.add_argument('--reasoning', action='store_true', help='Display reasoning in panels and set reasoning log level to INFO')
     parser.add_argument('--cleanup-interval', type=int, default=10, help='Run user block cleanup every N cycles (default: 10, 0 to disable)')
@@ -1751,7 +1761,7 @@ def main():
     
     # Configure logging based on command line arguments
     if args.simple_logs:
-        log_format = "void - %(levelname)s - %(message)s"
+        log_format = "agent - %(levelname)s - %(message)s"
     else:
         # Create custom formatter with symbols
         class SymbolFormatter(logging.Formatter):
@@ -1845,7 +1855,7 @@ def main():
     """Main bot loop that continuously monitors for notifications."""
     global start_time
     start_time = time.time()
-    logger.info("=== STARTING VOID BOT ===")
+    logger.info("=== STARTING AGENT BOT ===")
     agent = initialize_agent()
     logger.info(f"Agent initialized: {agent.id}")
     

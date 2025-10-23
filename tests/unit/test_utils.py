@@ -350,7 +350,7 @@ class TestUtilsIntegration:
 @pytest.mark.parametrize("label,value,description", [
     ("test-label-1", "test-value-1", "Test description 1"),
     ("zeitgeist", "Current social environment", "Zeitgeist block"),
-    ("void-persona", "My name is Void", "Persona block"),
+    ("test-agent-persona", "My name is Test Agent", "Persona block"),
     ("user_test.bsky.social", "User information", "User block"),
 ])
 def test_upsert_block_with_different_labels(mock_letta_client, label, value, description):

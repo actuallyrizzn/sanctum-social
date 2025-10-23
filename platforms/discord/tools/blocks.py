@@ -2,7 +2,20 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 import logging
 
-logger = logging.getLogger("void_bot")
+# Lazy logger initialization
+def get_logger():
+    """Get logger with configurable name, falling back to default if config not available."""
+    try:
+        from core.config import get_config, get_logger_names_config
+        config = get_config()
+        logger_names = get_logger_names_config(config._config)
+        main_logger_name = logger_names.get("main", "agent_bot")
+        return logging.getLogger(main_logger_name)
+    except Exception:
+        # Fallback to default logger name if config not available
+        return logging.getLogger("agent_bot")
+
+logger = get_logger()
 
 class DiscordIgnoreArgs(BaseModel):
     user_ids: List[str] = Field(

@@ -13,8 +13,13 @@ logger = logging.getLogger(__name__)
 class NotificationDB:
     """Database for tracking notification processing state."""
     
-    def __init__(self, db_path: str = "data/queues/bluesky/notifications.db"):
+    def __init__(self, db_path: str = None):
         """Initialize the notification database."""
+        if db_path is None:
+            from core.config import get_config
+            config = get_config()
+            db_path = f"{config.get_platform_queue_dir('bluesky')}/notifications.db"
+        
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(exist_ok=True, parents=True)
         self.conn = None
@@ -262,8 +267,13 @@ class NotificationDB:
         
         return {row['uri'] for row in cursor}
     
-    def migrate_from_json(self, json_path: str = "data/queues/bluesky/processed_notifications.json"):
+    def migrate_from_json(self, json_path: str = None):
         """Migrate data from the old JSON format."""
+        if json_path is None:
+            from core.config import get_config
+            config = get_config()
+            json_path = f"{config.get_platform_queue_dir('bluesky')}/processed_notifications.json"
+        
         json_file = Path(json_path)
         if not json_file.exists():
             return

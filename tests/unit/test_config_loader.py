@@ -36,7 +36,7 @@ class TestConfigLoader:
         """Test getting a nested configuration key."""
         loader = ConfigLoader(str(mock_config_file))
         result = loader.get("agent.name")
-        assert result == "test-void"
+        assert result == "test-agent"
     
     def test_get_missing_key_with_default(self, mock_config_file):
         """Test getting a missing key with default value."""

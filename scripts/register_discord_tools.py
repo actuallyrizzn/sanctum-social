@@ -1,10 +1,15 @@
 import os
 import yaml
 from letta_client import Letta
-from core.config import get_letta_config
+from core.config import get_letta_config, get_config, get_logger_names_config
 import logging
 
-logger = logging.getLogger("void_bot")
+# Get logger names from configuration
+config = get_config()
+logger_names = get_logger_names_config(config._config)
+main_logger_name = logger_names.get("main", "agent_bot")
+
+logger = logging.getLogger(main_logger_name)
 
 def register_discord_tools():
     """Register Discord tools with Letta agent"""

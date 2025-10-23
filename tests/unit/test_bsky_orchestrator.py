@@ -25,7 +25,7 @@ import platforms.bluesky.orchestrator as bsky
 from platforms.bluesky.orchestrator import (
     extract_handles_from_data,
     log_with_panel,
-    initialize_void,
+    initialize_agent,
     process_mention,
     notification_to_dict,
     load_processed_notifications,
@@ -164,8 +164,8 @@ class TestBlueskyInitialization:
     @patch('platforms.bluesky.orchestrator.get_letta_config')
     @patch('platforms.bluesky.orchestrator.Letta')
     @patch('platforms.bluesky.orchestrator.upsert_agent')
-    def test_initialize_void_success(self, mock_upsert_agent, mock_letta_class, mock_get_config):
-        """Test successful void agent initialization."""
+    def test_initialize_agent_success(self, mock_upsert_agent, mock_letta_class, mock_get_config):
+        """Test successful agent initialization."""
         # Setup mocks
         mock_config = {
             'api_key': 'test_letta_key',
@@ -185,7 +185,7 @@ class TestBlueskyInitialization:
         mock_upsert_agent.return_value = mock_agent
         
         # Test initialization
-        result = initialize_void()
+        result = initialize_agent()
         
         assert result == mock_agent
         assert result.id == 'test_agent_id'
@@ -196,17 +196,17 @@ class TestBlueskyInitialization:
     
     @patch('platforms.bluesky.orchestrator.get_letta_config')
     @patch('platforms.bluesky.orchestrator.Letta')
-    def test_initialize_void_config_error(self, mock_letta_class, mock_get_config):
-        """Test void initialization with configuration error."""
+    def test_initialize_agent_config_error(self, mock_letta_class, mock_get_config):
+        """Test agent initialization with configuration error."""
         mock_get_config.side_effect = Exception("Config error")
         
         with pytest.raises(Exception, match="Config error"):
-            initialize_void()
+            initialize_agent()
     
     @patch('platforms.bluesky.orchestrator.get_letta_config')
     @patch('platforms.bluesky.orchestrator.Letta')
-    def test_initialize_void_client_error(self, mock_letta_class, mock_get_config):
-        """Test void initialization with client error."""
+    def test_initialize_agent_client_error(self, mock_letta_class, mock_get_config):
+        """Test agent initialization with client error."""
         mock_config = {
             'api_key': 'test_letta_key',
             'agent_id': 'test_agent_id',
@@ -217,7 +217,7 @@ class TestBlueskyInitialization:
         mock_letta_class.side_effect = Exception("Client error")
         
         with pytest.raises(Exception, match="Client error"):
-            initialize_void()
+            initialize_agent()
 
 
 class TestBlueskyQueueOperations:
@@ -300,9 +300,9 @@ class TestBlueskyNotificationProcessing:
     def test_process_mention_success(self, mock_thread_to_yaml, mock_attach_blocks):
         """Test successful mention processing."""
         # Setup mocks
-        mock_void_agent = MagicMock()
-        mock_void_agent.id = 'test_agent_id'
-        mock_void_agent.memory = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.id = 'test_agent_id'
+        mock_agent.memory = MagicMock()
         
         mock_atproto_client = MagicMock()
         
@@ -320,7 +320,7 @@ class TestBlueskyNotificationProcessing:
         mock_thread_to_yaml.return_value = "Test thread YAML"
         
         # Test processing
-        result = process_mention(mock_void_agent, mock_atproto_client, notification_data)
+        result = process_mention(mock_agent, mock_atproto_client, notification_data)
         
         # Verify the function completed successfully
         assert result is not None
@@ -329,9 +329,9 @@ class TestBlueskyNotificationProcessing:
     @patch('platforms.bluesky.orchestrator.attach_user_blocks')
     def test_process_mention_with_user_blocks(self, mock_attach_blocks):
         """Test mention processing with user block attachment."""
-        mock_void_agent = MagicMock()
-        mock_void_agent.id = 'test_agent_id'
-        mock_void_agent.memory = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.id = 'test_agent_id'
+        mock_agent.memory = MagicMock()
         
         mock_atproto_client = MagicMock()
         
@@ -347,21 +347,21 @@ class TestBlueskyNotificationProcessing:
         }
         
         # Test processing
-        process_mention(mock_void_agent, mock_atproto_client, notification_data)
+        process_mention(mock_agent, mock_atproto_client, notification_data)
         
         # Verify user blocks were attached
         mock_attach_blocks.assert_called_once()
     
     def test_process_mention_error_handling(self):
         """Test mention processing error handling."""
-        mock_void_agent = MagicMock()
+        mock_agent = MagicMock()
         mock_atproto_client = MagicMock()
         
         # Invalid notification data
         invalid_notification = {}
         
         # Should handle gracefully without crashing
-        result = process_mention(mock_void_agent, mock_atproto_client, invalid_notification)
+        result = process_mention(mock_agent, mock_atproto_client, invalid_notification)
         assert result is not None
 
 
@@ -376,8 +376,8 @@ class TestBlueskyQueueProcessing:
         # Setup mocks
         mock_load_processed.return_value = {"123456789"}
         
-        mock_void_agent = MagicMock()
-        mock_void_agent.id = 'test_agent_id'
+        mock_agent = MagicMock()
+        mock_agent.id = 'test_agent_id'
         
         mock_atproto_client = MagicMock()
         
@@ -399,7 +399,7 @@ class TestBlueskyQueueProcessing:
                     mock_process_mention.return_value = True
                     
                     # Test processing
-                    load_and_process_queued_notifications(mock_void_agent, mock_atproto_client)
+                    load_and_process_queued_notifications(mock_agent, mock_atproto_client)
                     
                     mock_process_mention.assert_called_once()
     
@@ -437,17 +437,17 @@ class TestBlueskyQueueProcessing:
     @patch('platforms.bluesky.orchestrator.fetch_and_queue_new_notifications')
     def test_process_notifications_success(self, mock_fetch_notifications, mock_process_queued):
         """Test successful notifications processing workflow."""
-        mock_void_agent = MagicMock()
+        mock_agent = MagicMock()
         mock_atproto_client = MagicMock()
         
         mock_fetch_notifications.return_value = True
         mock_process_queued.return_value = True
         
         # Test processing
-        process_notifications(mock_void_agent, mock_atproto_client)
+        process_notifications(mock_agent, mock_atproto_client)
         
         mock_fetch_notifications.assert_called_once_with(mock_atproto_client)
-        mock_process_queued.assert_called_once_with(mock_void_agent, mock_atproto_client, False)
+        mock_process_queued.assert_called_once_with(mock_agent, mock_atproto_client, False)
 
 
 class TestBlueskyMemoryManagement:
@@ -485,11 +485,21 @@ class TestBlueskyMemoryManagement:
         
         mock_client.agents.blocks.list.assert_called_once_with(agent_id='test_agent_id')
     
+    @patch('platforms.bluesky.orchestrator.generate_temporal_block_labels')
+    @patch('platforms.bluesky.orchestrator.get_config')
     @patch('platforms.bluesky.orchestrator.Letta')
-    def test_attach_temporal_blocks_success(self, mock_letta_class):
+    def test_attach_temporal_blocks_success(self, mock_letta_class, mock_get_config, mock_generate_labels):
         """Test successful temporal blocks attachment."""
         mock_client = MagicMock()
         mock_letta_class.return_value = mock_client
+        
+        # Mock config and temporal labels
+        mock_config = MagicMock()
+        mock_get_config.return_value = mock_config
+        mock_generate_labels.return_value = ['test-agent_day_2024-01-01', 'test-agent_month_2024-01', 'test-agent_year_2024']
+        
+        # Mock block list (no blocks currently attached)
+        mock_client.agents.blocks.list.return_value = []
         
         # Mock block attachment
         mock_client.agents.blocks.attach.return_value = MagicMock()
@@ -500,23 +510,30 @@ class TestBlueskyMemoryManagement:
         assert result is not None
         mock_client.agents.blocks.attach.assert_called()
     
+    @patch('platforms.bluesky.orchestrator.generate_temporal_block_labels')
+    @patch('platforms.bluesky.orchestrator.get_config')
     @patch('platforms.bluesky.orchestrator.Letta')
-    def test_detach_temporal_blocks_success(self, mock_letta_class):
+    def test_detach_temporal_blocks_success(self, mock_letta_class, mock_get_config, mock_generate_labels):
         """Test successful temporal blocks detachment."""
         mock_client = MagicMock()
         mock_letta_class.return_value = mock_client
+        
+        # Mock config and temporal labels
+        mock_config = MagicMock()
+        mock_get_config.return_value = mock_config
+        mock_generate_labels.return_value = ['test-agent_day_2024-01-01', 'test-agent_month_2024-01', 'test-agent_year_2024']
         
         # Mock block detachment
         mock_client.agents.blocks.detach.return_value = MagicMock()
         
         # Mock the blocks list to return a block with the test label
         mock_block = MagicMock()
-        mock_block.label = 'test_block'
+        mock_block.label = 'test-agent_day_2024-01-01'
         mock_block.id = 'test_block_id'
         mock_client.agents.blocks.list.return_value = [mock_block]
         
         # Test detachment
-        result = detach_temporal_blocks(mock_client, 'test_agent_id', ['test_block'])
+        result = detach_temporal_blocks(mock_client, 'test_agent_id', ['test-agent_day_2024-01-01'])
         
         assert result is True
         mock_client.agents.blocks.detach.assert_called()
@@ -527,14 +544,14 @@ class TestBlueskyErrorHandling:
     
     def test_process_mention_with_invalid_data(self):
         """Test mention processing with invalid data."""
-        mock_void_agent = MagicMock()
+        mock_agent = MagicMock()
         mock_atproto_client = MagicMock()
         
         # Invalid notification data
         invalid_notification = None
         
         # Should handle gracefully
-        result = process_mention(mock_void_agent, mock_atproto_client, invalid_notification)
+        result = process_mention(mock_agent, mock_atproto_client, invalid_notification)
         assert result is not None
     
     @patch('platforms.bluesky.orchestrator.load_processed_notifications')
@@ -542,11 +559,11 @@ class TestBlueskyErrorHandling:
         """Test queued notifications processing with no files."""
         mock_load_processed.return_value = set()
         
-        mock_void_agent = MagicMock()
+        mock_agent = MagicMock()
         mock_atproto_client = MagicMock()
         
         with patch('pathlib.Path.glob', return_value=[]):
-            load_and_process_queued_notifications(mock_void_agent, mock_atproto_client)
+            load_and_process_queued_notifications(mock_agent, mock_atproto_client)
             # Just verify the function was called successfully (no exceptions)
     
     @patch('platforms.bluesky.orchestrator.save_notification_to_queue')
@@ -572,26 +589,26 @@ class TestBlueskyErrorHandling:
 class TestBlueskyIntegration:
     """Test Bluesky integration scenarios."""
     
-    @patch('platforms.bluesky.orchestrator.initialize_void')
+    @patch('platforms.bluesky.orchestrator.initialize_agent')
     @patch('platforms.bluesky.orchestrator.process_notifications')
-    def test_bluesky_integration_workflow(self, mock_process_notifications, mock_initialize_void):
+    def test_bluesky_integration_workflow(self, mock_process_notifications, mock_initialize_agent):
         """Test complete Bluesky integration workflow."""
         # Setup mocks
-        mock_void_agent = MagicMock()
-        mock_void_agent.id = 'test_agent_id'
-        mock_initialize_void.return_value = mock_void_agent
+        mock_agent = MagicMock()
+        mock_agent.id = 'test_agent_id'
+        mock_initialize_agent.return_value = mock_agent
         
         mock_atproto_client = MagicMock()
         mock_process_notifications.return_value = True
         
         # Test workflow
-        void_agent = mock_initialize_void()
-        result = mock_process_notifications(void_agent, mock_atproto_client)
+        agent = mock_initialize_agent()
+        result = mock_process_notifications(agent, mock_atproto_client)
         
-        assert void_agent == mock_void_agent
+        assert agent == mock_agent
         assert result is True
-        mock_initialize_void.assert_called_once()
-        mock_process_notifications.assert_called_once_with(mock_void_agent, mock_atproto_client)
+        mock_initialize_agent.assert_called_once()
+        mock_process_notifications.assert_called_once_with(mock_agent, mock_atproto_client)
     
     def test_bluesky_configuration_integration(self):
         """Test Bluesky configuration integration."""

@@ -54,7 +54,7 @@ class TestBotWorkflow:
         # Verify configuration sections
         assert config.get("letta.api_key") == "test-letta-api-key"
         assert config.get("bluesky.username") == "test.bsky.social"
-        assert config.get("bot.agent.name") == "test-void"
+        assert config.get("bot.agent.name") == "test-agent"
         
         # Verify configuration sections
         letta_config = config.get_section("letta")

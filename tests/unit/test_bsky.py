@@ -22,7 +22,7 @@ with patch('core.config.get_config') as mock_get_config:
         extract_handles_from_data,
         log_with_panel,
         export_agent_state,
-        initialize_void,
+        initialize_agent,
         notification_to_dict,
         load_processed_notifications,
         save_processed_notifications,
@@ -137,19 +137,27 @@ class TestExportAgentState:
         mock_client.agents.list_tools.return_value = []
         mock_client.agents.export_file.return_value = {"agent": "data"}
         
-        with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
-            mock_logger.info = Mock()
-            mock_logger.error = Mock()
+        with patch('platforms.bluesky.orchestrator.get_config') as mock_get_config:
+            mock_config = Mock()
+            mock_config.get_agent_data_dir.return_value = "data/agent"
+            mock_config.get_file_paths_config.return_value = {"archive_dir": "data/agent/archive"}
+            mock_config.get_archive_file_path.return_value = "data/agent/archive/test-agent_20240101_120000.af"
+            mock_config.get_current_agent_file_path.return_value = "data/agent/current.af"
+            mock_get_config.return_value = mock_config
             
-            with patch('platforms.bluesky.orchestrator.Path') as mock_path:
-                mock_path.return_value.exists.return_value = False
-                mock_path.return_value.mkdir.return_value = None
+            with patch('platforms.bluesky.orchestrator.logger') as mock_logger:
+                mock_logger.info = Mock()
+                mock_logger.error = Mock()
                 
-                with patch('builtins.open', mock_open()) as mock_file:
-                    result = export_agent_state(mock_client, mock_agent, skip_git=True)
+                with patch('platforms.bluesky.orchestrator.Path') as mock_path:
+                    mock_path.return_value.exists.return_value = False
+                    mock_path.return_value.mkdir.return_value = None
                     
-                    assert result is None  # Function doesn't return anything
-                    mock_client.agents.export_file.assert_called_once_with(agent_id="test-agent-id")
+                    with patch('builtins.open', mock_open()) as mock_file:
+                        result = export_agent_state(mock_client, mock_agent, skip_git=True)
+                        
+                        assert result is None  # Function doesn't return anything
+                        mock_client.agents.export_file.assert_called_once_with(agent_id="test-agent-id")
 
     def test_export_agent_state_agent_not_found(self):
         """Test export when agent is not found."""
@@ -183,9 +191,9 @@ class TestExportAgentState:
             assert result is None  # Function doesn't return anything
 
 
-class TestInitializeVoid:
-    def test_initialize_void_success(self):
-        """Test successful void initialization."""
+class TestInitializeAgent:
+    def test_initialize_agent_success(self):
+        """Test successful agent initialization."""
         mock_client = Mock()
         mock_agent = Mock()
         mock_agent.id = "test-agent-id"
@@ -199,11 +207,11 @@ class TestInitializeVoid:
             mock_logger.error = Mock()
             
             with patch('platforms.bluesky.orchestrator.Letta', return_value=mock_client):
-                result = initialize_void()
+                result = initialize_agent()
                 assert result == mock_agent
                 mock_client.agents.retrieve.assert_called_once()
 
-    def test_initialize_void_agent_not_found(self):
+    def test_initialize_agent_agent_not_found(self):
         """Test initialization when agent is not found."""
         mock_client = Mock()
         mock_client.agents.retrieve.side_effect = Exception("Agent not found")
@@ -215,7 +223,7 @@ class TestInitializeVoid:
             
             with patch('platforms.bluesky.orchestrator.Letta', return_value=mock_client):
                 with pytest.raises(Exception, match="Agent not found"):
-                    initialize_void()
+                    initialize_agent()
 
 
 class TestNotificationToDict:

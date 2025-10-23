@@ -15,7 +15,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 import platforms.bluesky.utils as bsky_utils
-from core.config import get_config
+from core.config import get_config, generate_mention_prompt, generate_follow_message
 
 class XRateLimitError(Exception):
     """Exception raised when X API rate limit is exceeded"""
@@ -48,12 +48,19 @@ def setup_logging_from_config(config_path: str = "config/platforms.yaml"):
     except Exception as e:
         logger.warning(f"Failed to configure logging from config: {e}, using default INFO level")
 
-# X-specific file paths
-X_QUEUE_DIR = Path("data/queues/x")
-X_CACHE_DIR = Path("data/cache/x")
-X_PROCESSED_MENTIONS_FILE = Path("data/queues/x/processed_mentions.json")
-X_LAST_SEEN_FILE = Path("data/queues/x/last_seen_id.json")
-X_DOWNRANK_USERS_FILE = Path("config/x_downrank_users.txt")
+# X-specific file paths - now configurable
+def get_x_paths():
+    """Get X paths from config or use defaults."""
+    try:
+        config = get_config()
+        queue_dir = config.get_platform_queue_dir("x")
+        cache_dir = config.get_platform_cache_dir("x")
+        return Path(queue_dir), Path(cache_dir), Path(f"{queue_dir}/processed_mentions.json"), Path(f"{queue_dir}/last_seen_id.json"), Path("config/x_downrank_users.txt")
+    except Exception:
+        # Fallback to default paths if config not available
+        return Path("data/queues/x"), Path("data/cache/x"), Path("data/queues/x/processed_mentions.json"), Path("data/queues/x/last_seen_id.json"), Path("config/x_downrank_users.txt")
+
+X_QUEUE_DIR, X_CACHE_DIR, X_PROCESSED_MENTIONS_FILE, X_LAST_SEEN_FILE, X_DOWNRANK_USERS_FILE = get_x_paths()
 
 class XClient:
     """X (Twitter) API client for fetching mentions and managing interactions."""
@@ -1337,14 +1344,16 @@ def test_letta_integration(agent_id: str = None):
         # Convert to YAML
         yaml_thread = thread_to_yaml_string(thread_data)
         
-        # Create prompt for the agent
-        prompt = f"""You are void, an AI agent operating on X (Twitter). You have received a mention and need to respond appropriately.
-
-Here is the thread context:
-
-{yaml_thread}
-
-Please craft a response that continues this conversation naturally. Keep responses conversational and authentic to your void persona."""
+        # Create prompt for the agent using configuration
+        config = get_config()
+        prompt = generate_mention_prompt(
+            config._config,
+            "x",
+            author_username,
+            author_name,
+            mention_text,
+            yaml_thread
+        )
         
         prompt_char_count = len(prompt)
         print(f"📤 Sending thread context to Letta agent... | prompt: {prompt_char_count} chars")
@@ -1415,7 +1424,7 @@ def reply_to_cameron_post():
         cameron_post_id = "1950690566909710618"
         
         # Simple reply message
-        reply_text = "Hello from void! 🤖 Testing X integration."
+        reply_text = "Hello from agent! 🤖 Testing X integration."
         
         print(f"Attempting to reply to post {cameron_post_id}")
         print(f"Reply text: {reply_text}")
@@ -1638,28 +1647,16 @@ def process_x_mention(agent, x_client, mention_data, queue_filepath=None, testin
         author_username = author_info.get('username', 'unknown')
         author_name = author_info.get('name', author_username)
         
-        prompt = f"""You received a mention on X (Twitter) from @{author_username} ({author_name}).
-
-MOST RECENT POST (the mention you're responding to):
-"{mention_text}"
-
-FULL THREAD CONTEXT:
-```yaml
-{thread_context}
-```
-
-The YAML above shows the complete conversation thread. The most recent post is the one mentioned above that you should respond to, but use the full thread context to understand the conversation flow.
-
-If you need to update user information, use the x_user_* tools.
-
-To reply, use the add_post_to_x_thread tool:
-- Each call creates one post (max 280 characters)
-- For most responses, a single call is sufficient
-- Only use multiple calls for threaded replies when:
-  * The topic requires extended explanation that cannot fit in 280 characters
-  * You're explicitly asked for a detailed/long response
-  * The conversation naturally benefits from a structured multi-part answer
-- Avoid unnecessary threads - be concise when possible"""
+        # Create prompt for Letta agent using configuration
+        config = get_config()
+        prompt = generate_mention_prompt(
+            config._config,
+            "x",
+            author_username,
+            author_name,
+            mention_text,
+            thread_context
+        )
 
         # Log mention processing
         title = f"X MENTION FROM @{author_username}"
@@ -1893,7 +1890,7 @@ To reply, use the add_post_to_x_thread tool:
 def acknowledge_x_post(x_client, post_id, note=None):
     """
     Acknowledge an X post that we replied to.
-    Uses the same Bluesky client and uploads to the void data repository on atproto,
+    Uses the same Bluesky client and uploads to the agent data repository on atproto,
     just like Bluesky acknowledgments.
     
     Args:
@@ -1905,7 +1902,7 @@ def acknowledge_x_post(x_client, post_id, note=None):
         True if successful, False otherwise
     """
     try:
-        # Use Bluesky client to upload acks to the void data repository on atproto
+        # Use Bluesky client to upload acks to the agent data repository on atproto
         bsky_client = bsky_utils.default_login()
         
         # Create a synthetic URI and CID for the X post
@@ -2128,9 +2125,9 @@ def initialize_x_agent():
     
     try:
         agent = client.agents.retrieve(agent_id=agent_id)
-        logger.info(f"Successfully loaded void agent for X: {agent.name} ({agent_id})")
+        logger.info(f"Successfully loaded agent for X: {agent.name} ({agent_id})")
     except Exception as e:
-        logger.error(f"Failed to load void agent {agent_id}: {e}")
+        logger.error(f"Failed to load agent {agent_id}: {e}")
         raise e
     
     # Clean up all user blocks at startup
@@ -2165,14 +2162,14 @@ def x_main_loop(testing_mode=False, cleanup_interval=10):
     from time import sleep
     from letta_client import Letta
 
-    logger.info("=== STARTING X VOID BOT ===")
+    logger.info("=== STARTING X AGENT BOT ===")
 
     # Configure logging from config file
     setup_logging_from_config()
 
-    # Initialize void agent
-    agent = initialize_x_void()
-    logger.info(f"X void agent initialized: {agent.id}")
+    # Initialize agent
+    agent = initialize_x_agent()
+    logger.info(f"X agent initialized: {agent.id}")
     
     # Initialize X client
     x_client = create_x_client()
@@ -2245,9 +2242,9 @@ def process_queue_only(testing_mode=False):
         logger.info("   - Queue files will not be deleted")
     
     try:
-        # Initialize void agent
-        agent = initialize_x_void()
-        logger.info(f"X void agent initialized: {agent.id}")
+        # Initialize agent
+        agent = initialize_x_agent()
+        logger.info(f"X agent initialized: {agent.id}")
         
         # Initialize X client
         x_client = create_x_client()

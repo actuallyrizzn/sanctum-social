@@ -21,10 +21,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("queue_manager")
 
-# Queue directories
-QUEUE_DIR = Path("data/queues/bluesky")
-QUEUE_ERROR_DIR = QUEUE_DIR / "errors"
-QUEUE_NO_REPLY_DIR = QUEUE_DIR / "no_reply"
+# Queue directories - now configurable
+def get_queue_dirs():
+    """Get queue directories from config or use defaults."""
+    try:
+        from core.config import get_config
+        config = get_config()
+        queue_dir = Path(config.get_platform_queue_dir("bluesky"))
+        return queue_dir, queue_dir / "errors", queue_dir / "no_reply"
+    except Exception:
+        # Fallback to default paths if config not available
+        queue_dir = Path("data/queues/bluesky")
+        return queue_dir, queue_dir / "errors", queue_dir / "no_reply"
+
+# Initialize queue directories
+QUEUE_DIR, QUEUE_ERROR_DIR, QUEUE_NO_REPLY_DIR = get_queue_dirs()
 
 
 # Error Classification System

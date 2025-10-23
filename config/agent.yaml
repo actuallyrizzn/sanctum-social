@@ -44,11 +44,21 @@ agent:
       value: "I haven't seen any users yet. I will update this block when I learn things about users, identified by their handles."
       description: "A block to store your understanding of users you talk to or observe on social networks."
     
-    # Temporal journal blocks (auto-generated)
-    temporal_journals:
-      enabled: true
-      naming_pattern: "{agent_name}_{type}_{date}"
-      types: ["day", "month", "year"]
+  # Temporal journal blocks (auto-generated)
+  temporal_journals:
+    enabled: true
+    naming_pattern: "{agent_name}_{type}_{date}"
+    types: ["day", "month", "year"]
+    
+  # File path configuration
+  file_paths:
+    data_dir: "data"
+    agent_dir: "data/agent"
+    archive_dir: "data/agent/archive"
+    archive_file_pattern: "{agent_name}_{timestamp}.af"
+    current_file: "data/agent/current.af"
+    queue_base_dir: "data/queues"
+    cache_base_dir: "data/cache"
 
 # Letta Configuration
 letta:

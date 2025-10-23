@@ -91,11 +91,11 @@ def mock_config():
     """Provide a mock configuration for testing."""
     return {
         "agent": {
-            "name": "test-void",
-            "display_name": "Test Void",
-            "description": "Test void agent",
+            "name": "test-agent",
+            "display_name": "Test Agent",
+            "description": "Test agent for unit testing",
             "personality": {
-                "core_identity": "My name is Test Void. I am a test agent.",
+                "core_identity": "My name is Test Agent. I am a test agent.",
                 "development_directive": "I must develop my test personality.",
                 "communication_style": "direct, analytical, information-dense",
                 "tone": "professional"
@@ -106,7 +106,7 @@ def mock_config():
                 "max_steps": 10
             },
             "commands": {
-                "stop_command": "#testvoidstop",
+                "stop_command": "#testagentstop",
                 "synthesis_frequency": "daily",
                 "journal_enabled": True
             },
@@ -117,20 +117,29 @@ def mock_config():
                     "description": "Test zeitgeist block"
                 },
                 "persona": {
-                    "label": "test-void-persona",
+                    "label": "test-agent-persona",
                     "value": "Test persona",
                     "description": "Test persona block"
                 },
                 "humans": {
-                    "label": "test-void-humans",
+                    "label": "test-agent-humans",
                     "value": "I haven't seen any users yet. I will update this block when I learn things about users, identified by their handles.",
                     "description": "A block to store your understanding of users you talk to or observe on social networks."
                 },
                 "temporal_journals": {
                     "enabled": True,
-                    "naming_pattern": "test-void_{type}_{date}",
+                    "naming_pattern": "test-agent_{type}_{date}",
                     "types": ["day", "month", "year"]
                 }
+            },
+            "file_paths": {
+                "data_dir": "data",
+                "agent_dir": "data/agent",
+                "archive_dir": "data/agent/archive",
+                "archive_file_pattern": "{agent_name}_{timestamp}.af",
+                "current_file": "data/agent/current.af",
+                "queue_base_dir": "data/queues",
+                "cache_base_dir": "data/cache"
             }
         },
         "letta": {
@@ -206,13 +215,13 @@ def mock_config():
         "logging": {
             "level": "DEBUG",
             "logger_names": {
-                "main": "test-void_bot",
-                "prompts": "test-void_bot_prompts",
-                "platform": "test-void_platform"
+                "main": "test-agent_bot",
+                "prompts": "test-agent_bot_prompts",
+                "platform": "test-agent_platform"
             },
             "loggers": {
-                "test-void_bot": "DEBUG",
-                "test-void_bot_prompts": "DEBUG",
+                "test-agent_bot": "DEBUG",
+                "test-agent_bot_prompts": "DEBUG",
                 "httpx": "CRITICAL"
             }
         }

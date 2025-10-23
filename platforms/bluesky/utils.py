@@ -1046,7 +1046,7 @@ def acknowledge_post(client: Client, post_uri: str, post_cid: str, note: Optiona
     Create a stream.thought.ack record to acknowledge a post.
     
     This creates a custom acknowledgment record instead of a standard Bluesky like,
-    allowing void to track which posts it has engaged with.
+    allowing the agent to track which posts it has engaged with.
     
     Args:
         client: Authenticated Bluesky client
@@ -1125,7 +1125,7 @@ def create_tool_call_record(client: Client, tool_name: str, arguments: str, tool
     """
     Create a stream.thought.tool_call record to track tool usage.
     
-    This creates a record of tool calls made by void during processing,
+    This creates a record of tool calls made by the agent during processing,
     allowing for analysis of tool usage patterns and debugging.
     
     Args:
@@ -1207,7 +1207,7 @@ def create_reasoning_record(client: Client, reasoning_text: str) -> Optional[Dic
     """
     Create a stream.thought.reasoning record to track agent reasoning.
     
-    This creates a record of void's reasoning during message processing,
+    This creates a record of the agent's reasoning during message processing,
     providing transparency into the decision-making process.
     
     Args:

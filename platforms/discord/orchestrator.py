@@ -36,12 +36,21 @@ if not logger.handlers:
 prompt_logger = logging.getLogger(prompt_logger_name)
 prompt_logger.setLevel(logging.WARNING)
 
-# Discord-specific file paths
-DISCORD_QUEUE_DIR = Path("data/queues/discord")
-DISCORD_CACHE_DIR = Path("data/cache/discord")
+# Discord-specific file paths - now configurable
+def get_discord_paths():
+    """Get Discord paths from config or use defaults."""
+    try:
+        config = get_config()
+        queue_dir = config.get_platform_queue_dir("discord")
+        cache_dir = config.get_platform_cache_dir("discord")
+        return Path(queue_dir), Path(cache_dir), Path("config/discord_downrank_users.txt")
+    except Exception:
+        # Fallback to default paths if config not available
+        return Path("data/queues/discord"), Path("data/cache/discord"), Path("config/discord_downrank_users.txt")
+
+DISCORD_QUEUE_DIR, DISCORD_CACHE_DIR, DISCORD_DOWNRANK_USERS_FILE = get_discord_paths()
 DISCORD_PROCESSED_MENTIONS_FILE = DISCORD_QUEUE_DIR / "processed_mentions.json"
 DISCORD_LAST_SEEN_FILE = DISCORD_QUEUE_DIR / "last_seen_id.json"
-DISCORD_DOWNRANK_USERS_FILE = Path("config/discord_downrank_users.txt")
 
 class DiscordRateLimitError(Exception):
     """Exception raised when Discord API rate limit is exceeded"""

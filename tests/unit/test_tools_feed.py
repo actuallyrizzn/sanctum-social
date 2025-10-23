@@ -220,8 +220,8 @@ class TestGetBlueskyFeed:
                 mock_post.assert_called_once()
                 mock_get.assert_called_once()
 
-    def test_get_bluesky_feed_void_cafe_feed(self):
-        """Test getting void cafe feed."""
+    def test_get_bluesky_feed_agent_cafe_feed(self):
+        """Test getting agent cafe feed."""
         with patch('os.getenv') as mock_getenv:
             mock_getenv.side_effect = lambda key, default=None: {
                 'BSKY_USERNAME': 'test.user.bsky.social',
@@ -248,11 +248,11 @@ class TestGetBlueskyFeed:
                 mock_feed_response.json.return_value = {'feed': []}
                 mock_get.return_value = mock_feed_response
 
-                result = get_bluesky_feed("void-cafe")
+                result = get_bluesky_feed("agent-cafe")
                 
                 assert "feed:" in result
                 assert "type: custom" in result
-                assert "name: void-cafe" in result
+                assert "name: agent-cafe" in result
                 mock_post.assert_called_once()
                 mock_get.assert_called_once()
 
