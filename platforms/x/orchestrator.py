@@ -1191,7 +1191,7 @@ def test_fetch_and_queue():
         
         if new_count > 0:
             print(f"✅ Queued {new_count} new mentions")
-            print(f"📁 Check ./data/queues/x/ directory for queued mentions")
+            print(f"📁 Check data/queues/x/ directory for queued mentions")
             
             # Show updated state
             new_last_seen = load_last_seen_id()

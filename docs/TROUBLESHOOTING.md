@@ -271,11 +271,11 @@ python queue_manager.py stats
 2. **Permission Issues**
    ```bash
    # Check queue directory permissions
-   ls -la queue/
+   ls -la data/queues/bluesky/
    
    # Fix permissions
-   sudo chown -R void:void queue/
-   sudo chmod -R 755 queue/
+   sudo chown -R void:void data/queues/bluesky/
+   sudo chmod -R 755 data/queues/bluesky/
    ```
 
 3. **Disk Space Issues**
@@ -284,7 +284,7 @@ python queue_manager.py stats
    df -h
    
    # Clean up old files
-   find queue/ -name "*.json" -mtime +30 -delete
+   find data/queues/bluesky/ -name "*.json" -mtime +30 -delete
    ```
 
 ### Queue Health Issues
@@ -308,7 +308,7 @@ python -c "from queue_manager import QueueHealthMonitor; monitor = QueueHealthMo
 1. **High Error Rates**
    ```bash
    # Check for common error patterns
-   grep -r "ERROR" queue/
+   grep -r "ERROR" data/queues/bluesky/
    
    # Repair corrupted files
    python queue_manager.py repair
@@ -726,15 +726,15 @@ If all else fails, follow this complete recovery procedure:
 2. **Backup Data**
    ```bash
    tar -czf recovery-backup-$(date +%Y%m%d_%H%M%S).tar.gz \
-       config.yaml sessions/ queue/ x_queue/ x_cache/
+       config.yaml data/agent/ data/queues/bluesky/ data/queues/x/ data/cache/x/
    ```
 
 3. **Clean Environment**
    ```bash
    # Remove corrupted files
    rm -rf sessions/*.json
-   rm -rf queue/*.json
-   rm -rf x_queue/*.json
+   rm -rf data/queues/bluesky/*.json
+   rm -rf data/queues/x/*.json
    
    # Clean up old logs
    find logs/ -name "*.log" -mtime +7 -delete

@@ -75,10 +75,10 @@ bot:
 queue:
   priority_users:                        # Users whose messages get priority
     - "cameron.pfiffer.org"
-  base_dir: "queue"                      # Queue directory
-  error_dir: "queue/errors"              # Failed notifications
-  no_reply_dir: "queue/no_reply"         # No-reply notifications
-  processed_file: "queue/processed_notifications.json"
+  base_dir: "data/queues/bluesky"           # Queue directory
+  error_dir: "data/queues/bluesky/errors"    # Failed notifications
+  no_reply_dir: "data/queues/bluesky/no_reply"  # No-reply notifications
+  processed_file: "data/queues/bluesky/processed_notifications.json"
 ```
 
 ### Threading Configuration

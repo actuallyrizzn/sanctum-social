@@ -71,10 +71,10 @@ queue:
     - "cameron.pfiffer.org"
   
   # Directories
-  base_dir: "queue"
-  error_dir: "queue/errors"
-  no_reply_dir: "queue/no_reply"
-  processed_file: "queue/processed_notifications.json"
+  base_dir: "data/queues/bluesky"
+  error_dir: "data/queues/bluesky/errors"
+  no_reply_dir: "data/queues/bluesky/no_reply"
+  processed_file: "data/queues/bluesky/processed_notifications.json"
 
 # X (Twitter) Configuration
 x:

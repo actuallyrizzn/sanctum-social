@@ -259,8 +259,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./config.yaml:/app/config.yaml:ro
-      - ./sessions:/app/sessions
-      - ./queue:/app/queue
+      - ./data/queues/bluesky:/app/data/queues/bluesky
+      - ./data/agent:/app/data/agent
     environment:
       - LETTA_API_KEY=${LETTA_API_KEY}
       - BSKY_USERNAME=${BSKY_USERNAME}
@@ -273,8 +273,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./config.yaml:/app/config.yaml:ro
-      - ./x_queue:/app/x_queue
-      - ./x_cache:/app/x_cache
+      - ./data/queues/x:/app/data/queues/x
+      - ./data/cache/x:/app/data/cache/x
     environment:
       - LETTA_API_KEY=${LETTA_API_KEY}
       - X_API_KEY=${X_API_KEY}
@@ -407,7 +407,10 @@ cp config.yaml config.yaml.backup.$(date +%Y%m%d_%H%M%S)
 ```bash
 # Backup sessions and queues
 tar -czf void-backup-$(date +%Y%m%d_%H%M%S).tar.gz \
-    sessions/ queue/ x_queue/ x_cache/
+    data/queues/bluesky/ \
+    data/queues/x/ \
+    data/cache/x/ \
+    data/agent/
 ```
 
 ### 3. Automated Backup Script
@@ -425,9 +428,9 @@ mkdir -p $BACKUP_DIR
 tar -czf $BACKUP_DIR/void-backup-$DATE.tar.gz \
     config.yaml \
     sessions/ \
-    queue/ \
-    x_queue/ \
-    x_cache/
+    data/queues/bluesky/ \
+    data/queues/x/ \
+    data/cache/x/
 
 # Keep only last 7 days of backups
 find $BACKUP_DIR -name "void-backup-*.tar.gz" -mtime +7 -delete

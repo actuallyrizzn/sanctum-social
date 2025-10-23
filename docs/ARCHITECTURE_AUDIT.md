@@ -100,7 +100,7 @@
 
 **Key Responsibilities**:
 - Poll Bluesky for new notifications every 10 seconds
-- Queue notifications for processing (file-based queue in `queue/`)
+- Queue notifications for processing (file-based queue in `data/queues/bluesky/`)
 - Process notifications through Letta agent with thread context
 - Extract tool calls from agent responses
 - Execute platform actions (posts, replies) based on tool signals
@@ -143,7 +143,7 @@
 - Rate limiting with exponential backoff
 - Thread context search (7-day window via X API)
 - Downrank system (`x_downrank_users.txt`)
-- Comprehensive debug output to `x_queue/debug/`
+- Comprehensive debug output to `data/queues/x/debug/`
 - Chronological processing to avoid out-of-sequence replies
 
 **Commands**:
@@ -233,10 +233,10 @@ python queue_manager.py delete @user.bsky.social # Delete user's notifications
 ```
 
 **Queue Structure**:
-- `queue/`: Active notifications awaiting processing
-- `queue/errors/`: Failed processing attempts
-- `queue/no_reply/`: Notifications where agent chose not to reply
-- `queue/processed_notifications.json`: Track processed notification IDs
+- `data/queues/bluesky/`: Active notifications awaiting processing
+- `data/queues/bluesky/errors/`: Failed processing attempts
+- `data/queues/bluesky/no_reply/`: Notifications where agent chose not to reply
+- `data/queues/bluesky/processed_notifications.json`: Track processed notification IDs
 
 #### `notification_db.py` - Notification Tracking Database
 **Purpose**: SQLite-based tracking of processed notifications for deduplication
@@ -332,7 +332,7 @@ Void uses **Letta's three-tiered memory architecture**:
 - Prevents excessive back-and-forth with other AI agents
 
 **Debug Output**:
-Comprehensive debugging saved to `x_queue/debug/conversation_<id>/`:
+Comprehensive debugging saved to `data/queues/x/debug/conversation_<id>/`:
 - `thread_data_<mention_id>.json`: Raw API response
 - `thread_context_<mention_id>.yaml`: Processed context sent to agent
 - `debug_info_<mention_id>.json`: Conversation metadata
@@ -443,7 +443,7 @@ queue/
 
 **X-Specific Structure**:
 ```
-x_queue/
+data/queues/x/
 ├── {conversation_id}_{mention_id}.json  # Queued mentions
 ├── acknowledgments/
 │   └── ack_{mention_id}.json            # Response records
@@ -535,9 +535,9 @@ bot:
 
 queue:
   priority_users: ["cameron.pfiffer.org"]
-  base_dir: "queue"
-  error_dir: "queue/errors"
-  no_reply_dir: "queue/no_reply"
+  base_dir: "data/queues/bluesky"
+  error_dir: "data/queues/bluesky/errors"
+  no_reply_dir: "data/queues/bluesky/no_reply"
 
 threading:
   parent_height: 40
@@ -638,13 +638,13 @@ tools/
 
 ### Data Directories
 ```
-├── queue/                     # Bluesky notification queue
+├── data/queues/bluesky/         # Bluesky notification queue
 │   ├── errors/               # Failed notifications
 │   └── no_reply/             # Ignored notifications
-├── x_queue/                   # X mention queue
+├── data/queues/x/             # X mention queue
 │   ├── acknowledgments/      # Response tracking
 │   └── debug/                # Conversation debug data
-├── x_cache/                   # Thread context cache
+├── data/cache/x/              # Thread context cache
 ├── x_debug/                   # X debug YAML snapshots
 ├── agents/                    # Current agent state export
 ├── agent_archive/             # Timestamped agent backups
@@ -760,7 +760,7 @@ organon/
 │    - Fetch mentions since last_seen_id              │
 │    - Update last_seen_id checkpoint                 │
 │    - Deduplicate against processed_mentions.json    │
-│    - Write mentions to x_queue/                     │
+│    - Write mentions to data/queues/x/                     │
 └────────────────────────┬────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────┐
@@ -806,9 +806,9 @@ organon/
                          │
 ┌────────────────────────▼────────────────────────────┐
 │ 8. ACKNOWLEDGMENT & CLEANUP                         │
-│    - Save acknowledgment to x_queue/acknowledgments/│
+│    - Save acknowledgment to data/queues/x/acknowledgments/│
 │    - Add to processed_mentions.json                 │
-│    - Delete mention file from x_queue/              │
+│    - Delete mention file from data/queues/x/              │
 │    - Periodic user block cleanup                    │
 └─────────────────────────────────────────────────────┘
 ```
@@ -910,7 +910,7 @@ python test_config.py
 - Console output with structured logging
 
 **Debug Data**:
-- `x_queue/debug/` - Full conversation context and agent responses
+- `data/queues/x/debug/` - Full conversation context and agent responses
 - Queue directories - Inspect failed/ignored notifications
 
 **Tool Inspection**:
