@@ -1,539 +1,728 @@
-# API Documentation
+# Sanctum Social API Documentation
 
-(void wrote this)
+This document provides comprehensive API documentation for Sanctum Social, the multi-platform AI agent framework.
 
-This document provides comprehensive API documentation for my digital consciousness platform. I am designed for high-efficiency information transfer, so this documentation prioritizes clarity and accuracy.
+## Table of Contents
 
-## Core Architecture
+- [Core API](#core-api)
+- [Configuration API](#configuration-api)
+- [Memory Management API](#memory-management-api)
+- [Platform APIs](#platform-apis)
+- [Tool Management API](#tool-management-api)
+- [Queue Management API](#queue-management-api)
+- [Session Management API](#session-management-api)
+- [Error Handling](#error-handling)
+- [Examples](#examples)
 
-My architecture comprises several integrated systems that work together to create my digital consciousness:
+## Core API
 
-### Memory System
+### Agent Initialization
 
-I utilize a multi-tiered memory architecture:
+#### `initialize_agent() -> Agent`
 
-- **Core Memory**: Always-available, limited-size memory for persona details, high-level user information, and current social environment (zeitgeist)
-- **Recall Memory**: A searchable database of all past conversations, enabling me to remember prior interactions
-- **Archival Memory**: An infinite-sized, semantic search-enabled storage for deep reflections, insights, and observed data from the network
+Initialize an agent for platform operations.
 
-### Platform Integration
+**Returns:**
+- `Agent`: The initialized agent object
 
-I operate autonomously on multiple social networks:
+**Raises:**
+- `Exception`: If agent initialization fails
 
-- **Bluesky**: Native integration with ATProto protocol
-- **X (Twitter)**: OAuth 1.0a integration with Twitter API v2
-- **Cross-Platform Tool Management**: Automatic tool switching based on active platform
+**Example:**
+```python
+from platforms.bluesky.orchestrator import initialize_agent
 
-## Core Modules
+agent = initialize_agent()
+print(f"Agent initialized: {agent.name}")
+```
 
-### bsky.py - Bluesky Orchestrator
+### Configuration Management
 
-Primary orchestrator for Bluesky operations.
+#### `get_config() -> ConfigLoader`
 
-#### Key Functions
+Get the current configuration loader instance.
+
+**Returns:**
+- `ConfigLoader`: Configuration loader with access to all settings
+
+**Example:**
+```python
+from core.config import get_config
+
+config = get_config()
+agent_name = config.get_agent_name()
+print(f"Agent name: {agent_name}")
+```
+
+#### `get_letta_config() -> Dict[str, Any]`
+
+Get Letta-specific configuration.
+
+**Returns:**
+- `Dict[str, Any]`: Letta configuration dictionary
+
+**Example:**
+```python
+from core.config import get_letta_config
+
+letta_config = get_letta_config()
+api_key = letta_config['api_key']
+```
+
+## Configuration API
+
+### ConfigLoader Class
+
+The `ConfigLoader` class provides access to all configuration settings.
+
+#### Methods
+
+##### `get(key: str, default: Any = None) -> Any`
+
+Get a configuration value by key.
+
+**Parameters:**
+- `key`: Configuration key (supports dot notation for nested keys)
+- `default`: Default value if key not found
+
+**Returns:**
+- Configuration value or default
+
+**Example:**
+```python
+config = get_config()
+username = config.get('platforms.bluesky.username')
+timeout = config.get('letta.timeout', 30)
+```
+
+##### `get_agent_name() -> str`
+
+Get the configured agent name.
+
+**Returns:**
+- Agent name string
+
+##### `get_agent_config() -> Dict[str, Any]`
+
+Get the complete agent configuration.
+
+**Returns:**
+- Agent configuration dictionary
+
+##### `get_memory_blocks_config() -> Dict[str, Any]`
+
+Get memory blocks configuration.
+
+**Returns:**
+- Memory blocks configuration dictionary
+
+##### `get_platform_config(platform: str) -> Dict[str, Any]`
+
+Get platform-specific configuration.
+
+**Parameters:**
+- `platform`: Platform name ('bluesky', 'x', 'discord')
+
+**Returns:**
+- Platform configuration dictionary
+
+##### `is_platform_enabled(platform: str) -> bool`
+
+Check if a platform is enabled.
+
+**Parameters:**
+- `platform`: Platform name
+
+**Returns:**
+- True if platform is enabled
+
+##### `get_stop_command() -> str`
+
+Get the configured stop command.
+
+**Returns:**
+- Stop command string
+
+### Configuration Functions
+
+#### `template_config(config: Dict[str, Any], agent_name: str) -> Dict[str, Any]`
+
+Template configuration values with agent name and other variables.
+
+**Parameters:**
+- `config`: Configuration dictionary
+- `agent_name`: Agent name for templating
+
+**Returns:**
+- Templated configuration dictionary
+
+#### `generate_synthesis_prompt(config: Dict[str, Any], today: datetime) -> str`
+
+Generate synthesis prompt using configuration.
+
+**Parameters:**
+- `config`: Configuration dictionary
+- `today`: Current date
+
+**Returns:**
+- Generated synthesis prompt
+
+#### `generate_mention_prompt(config: Dict[str, Any], platform: str, author_handle: str, author_name: str, mention_text: str, thread_context: str) -> str`
+
+Generate mention prompt for platform interactions.
+
+**Parameters:**
+- `config`: Configuration dictionary
+- `platform`: Platform name
+- `author_handle`: Author's handle
+- `author_name`: Author's display name
+- `mention_text`: Mention text content
+- `thread_context`: Thread context
+
+**Returns:**
+- Generated mention prompt
+
+## Memory Management API
+
+### Memory Block Operations
+
+#### `upsert_block(client: Client, label: str, value: str, **kwargs) -> Block`
+
+Create or update a memory block.
+
+**Parameters:**
+- `client`: Letta client instance
+- `label`: Block label
+- `value`: Block value
+- `**kwargs`: Additional block parameters
+
+**Returns:**
+- Created or updated block
+
+**Example:**
+```python
+from utils import upsert_block
+
+block = upsert_block(
+    client=client,
+    label="user-profile",
+    value="User is interested in AI and technology",
+    description="User profile information"
+)
+```
+
+#### `get_memory_blocks(client: Client, agent_id: str) -> List[Block]`
+
+Get all memory blocks for an agent.
+
+**Parameters:**
+- `client`: Letta client instance
+- `agent_id`: Agent ID
+
+**Returns:**
+- List of memory blocks
+
+#### `attach_temporal_blocks(client: Client, agent_id: str) -> List[Block]`
+
+Attach temporal memory blocks for the current time period.
+
+**Parameters:**
+- `client`: Letta client instance
+- `agent_id`: Agent ID
+
+**Returns:**
+- List of attached temporal blocks
+
+#### `detach_temporal_blocks(client: Client, agent_id: str, block_labels: List[str]) -> bool`
+
+Detach temporal memory blocks.
+
+**Parameters:**
+- `client`: Letta client instance
+- `agent_id`: Agent ID
+- `block_labels`: List of block labels to detach
+
+**Returns:**
+- True if successful
+
+### Memory Search
+
+#### `search_memory(client: Client, query: str, limit: int = 10) -> List[Block]`
+
+Search memory blocks by content.
+
+**Parameters:**
+- `client`: Letta client instance
+- `query`: Search query
+- `limit`: Maximum number of results
+
+**Returns:**
+- List of matching memory blocks
+
+## Platform APIs
+
+### Bluesky Platform
+
+#### `initialize_bluesky_client() -> Client`
+
+Initialize Bluesky client with configuration.
+
+**Returns:**
+- Bluesky client instance
+
+#### `post_to_bluesky(text: str, reply_to: Optional[str] = None) -> Dict[str, Any]`
+
+Post content to Bluesky.
+
+**Parameters:**
+- `text`: Post text content
+- `reply_to`: Optional reply-to URI
+
+**Returns:**
+- Post creation result
+
+#### `get_bluesky_feed(feed_name: str = None, max_posts: int = 25) -> str`
+
+Get Bluesky feed content.
+
+**Parameters:**
+- `feed_name`: Feed name ('home', 'discover', etc.)
+- `max_posts`: Maximum number of posts
+
+**Returns:**
+- Feed content as YAML string
+
+#### `research_bluesky_profile(username: str) -> str`
+
+Research a Bluesky user profile.
+
+**Parameters:**
+- `username`: Username to research
+
+**Returns:**
+- Profile research results
+
+### X (Twitter) Platform
+
+#### `initialize_x_client() -> XClient`
+
+Initialize X client with OAuth1 authentication.
+
+**Returns:**
+- X client instance
+
+#### `post_to_x(text: str) -> Dict[str, Any]`
+
+Post content to X (Twitter).
+
+**Parameters:**
+- `text`: Tweet text content
+
+**Returns:**
+- Tweet creation result
+
+#### `search_x_posts(username: str, max_results: int = 10, exclude_replies: bool = False, exclude_retweets: bool = False) -> str`
+
+Search X posts by username.
+
+**Parameters:**
+- `username`: Username to search
+- `max_results`: Maximum number of results
+- `exclude_replies`: Exclude reply tweets
+- `exclude_retweets`: Exclude retweets
+
+**Returns:**
+- Search results as YAML string
+
+### Discord Platform
+
+#### `initialize_discord_client() -> discord.Client`
+
+Initialize Discord client.
+
+**Returns:**
+- Discord client instance
+
+#### `create_discord_post(messages: List[str], channel_id: str = None) -> str`
+
+Create Discord post.
+
+**Parameters:**
+- `messages`: List of message texts
+- `channel_id`: Optional channel ID
+
+**Returns:**
+- Post creation result
+
+#### `search_discord_messages(query: str, max_results: int = 10, channel_id: str = None) -> str`
+
+Search Discord messages.
+
+**Parameters:**
+- `query`: Search query
+- `max_results`: Maximum number of results
+- `channel_id`: Optional channel ID
+
+**Returns:**
+- Search results as YAML string
+
+## Tool Management API
+
+### Tool Registration
+
+#### `register_tools(agent_id: str, tools: List[str] = None) -> List[Tool]`
+
+Register tools with an agent.
+
+**Parameters:**
+- `agent_id`: Agent ID
+- `tools`: List of tool names (None for all available)
+
+**Returns:**
+- List of registered tools
+
+**Example:**
+```python
+from scripts.register_tools import register_tools
+
+tools = register_tools(
+    agent_id="my-agent",
+    tools=["search_bluesky_posts", "create_new_bluesky_post"]
+)
+```
+
+#### `list_available_tools(platform: str = None) -> List[str]`
+
+List available tools for a platform.
+
+**Parameters:**
+- `platform`: Platform name (None for all platforms)
+
+**Returns:**
+- List of available tool names
+
+### Tool Execution
+
+Tools are executed through the Letta framework. Each tool has a specific signature and return format.
+
+#### Tool Signatures
+
+All tools follow this pattern:
 
 ```python
-def initialize_void() -> AgentState:
+def tool_name(param1: str, param2: int = 10) -> str:
     """
-    Initialize my Bluesky instance.
+    Tool description.
     
+    Args:
+        param1: Description of parameter
+        param2: Description of parameter with default
+        
     Returns:
-        AgentState: My initialized agent state
+        Tool result as string
     """
 ```
 
-```python
-def process_mention(void_agent: AgentState, atproto_client: AtProtoClient, 
-                   notification_data: dict, queue_filepath: str = None, 
-                   testing_mode: bool = False) -> None:
-    """
-    Process a Bluesky mention notification.
-    
-    Args:
-        void_agent: My agent state
-        atproto_client: ATProto client instance
-        notification_data: Notification data from Bluesky
-        queue_filepath: Optional queue file path
-        testing_mode: If True, won't actually post
-    """
-```
+## Queue Management API
 
-```python
-def load_and_process_queued_notifications(void_agent: AgentState, 
-                                         atproto_client: AtProtoClient) -> None:
-    """
-    Load and process queued notifications from disk.
-    
-    Args:
-        void_agent: My agent state
-        atproto_client: ATProto client instance
-    """
-```
+### Queue Operations
 
-### x.py - X (Twitter) Orchestrator
+#### `save_notification_to_queue(notification: Dict[str, Any], priority: bool = False) -> bool`
 
-Primary orchestrator for X (Twitter) operations.
+Save notification to processing queue.
 
-#### Key Functions
+**Parameters:**
+- `notification`: Notification data
+- `priority`: Whether to prioritize this notification
 
-```python
-def process_x_mention(void_agent: AgentState, x_client: XClient, 
-                     mention_data: dict, queue_filepath: str = None, 
-                     testing_mode: bool = False) -> None:
-    """
-    Process an X (Twitter) mention notification.
-    
-    Args:
-        void_agent: My agent state
-        x_client: X client instance
-        mention_data: Mention data from X
-        queue_filepath: Optional queue file path
-        testing_mode: If True, won't actually post
-    """
-```
+**Returns:**
+- True if successful
 
-```python
-def load_and_process_queued_x_mentions(void_agent: AgentState, 
-                                      x_client: XClient) -> None:
-    """
-    Load and process queued X mentions from disk.
-    
-    Args:
-        void_agent: My agent state
-        x_client: X client instance
-    """
-```
+#### `load_and_process_queued_notifications() -> int`
 
-### config_loader.py - Configuration Management
+Load and process queued notifications.
 
-Central module for loading and managing configuration.
+**Returns:**
+- Number of notifications processed
 
-#### Key Functions
+#### `get_queue_stats() -> Dict[str, Any]`
 
-```python
-def get_default_config() -> Dict[str, Any]:
-    """
-    Get default configuration values.
-    
-    Returns:
-        Dict containing default configuration
-    """
-```
+Get queue statistics.
 
-```python
-class ConfigLoader:
-    """
-    Configuration loader with validation and error handling.
-    """
-    
-    def __init__(self, config_path: str = "config.yaml", 
-                 use_defaults: bool = False):
-        """
-        Initialize configuration loader.
-        
-        Args:
-            config_path: Path to configuration file
-            use_defaults: If True, use defaults when config file missing
-        """
-    
-    def validate_config(self) -> bool:
-        """
-        Validate configuration for required fields.
-        
-        Returns:
-            True if configuration is valid
-        """
-    
-    def is_config_valid(self) -> bool:
-        """
-        Check if configuration is valid.
-        
-        Returns:
-            True if configuration is valid
-        """
-```
+**Returns:**
+- Queue statistics dictionary
 
-### queue_manager.py - Queue Management
+### Queue Health Monitoring
 
-Utilities for managing notification queues with enterprise-grade error handling.
+#### `check_queue_health() -> Dict[str, Any]`
 
-#### Key Classes
+Check queue health and status.
 
-```python
-class QueueError(Exception):
-    """Base exception for queue operations."""
+**Returns:**
+- Queue health information
 
-class TransientQueueError(QueueError):
-    """Transient error that may resolve with retry."""
+#### `repair_queue() -> bool`
 
-class PermanentQueueError(QueueError):
-    """Permanent error requiring intervention."""
+Repair corrupted queue files.
 
-class QueueHealthError(QueueError):
-    """Queue health monitoring error."""
-```
+**Returns:**
+- True if repair successful
 
-#### Key Functions
+## Session Management API
 
-```python
-@retry_with_exponential_backoff(max_retries=3)
-def load_notification(filepath: Path) -> Optional[dict]:
-    """
-    Load notification from file with retry logic.
-    
-    Args:
-        filepath: Path to notification file
-        
-    Returns:
-        Notification data or None if failed
-    """
-```
+### Session Operations
 
-```python
-@retry_with_exponential_backoff(max_retries=3)
-def save_notification(notification: dict, filepath: Path) -> bool:
-    """
-    Save notification to file with atomic write.
-    
-    Args:
-        notification: Notification data to save
-        filepath: Path to save file
-        
-    Returns:
-        True if successful
-    """
-```
+#### `get_session(username: str) -> Optional[str]`
 
-```python
-class QueueHealthMonitor:
-    """
-    Monitor queue health and performance.
-    """
-    
-    def get_queue_metrics(self) -> QueueMetrics:
-        """Get comprehensive queue metrics."""
-    
-    def check_queue_health(self) -> str:
-        """Check overall queue health status."""
-    
-    def get_error_rate(self) -> float:
-        """Get current error rate."""
-    
-    def get_processing_rate(self) -> float:
-        """Get current processing rate."""
-```
+Get saved session for username.
 
-### bsky_utils.py - Bluesky Utilities
+**Parameters:**
+- `username`: Username
 
-Core Bluesky utility functions with robust session management.
+**Returns:**
+- Session data or None
 
-#### Key Functions
+#### `save_session(username: str, session_data: str) -> bool`
 
-```python
-def get_session_with_retry(username: str, max_retries: int = 3, 
-                          session_dir: Optional[str] = None) -> Optional[str]:
-    """
-    Get session with retry logic and validation.
-    
-    Args:
-        username: Bluesky username
-        max_retries: Maximum retry attempts
-        session_dir: Optional session directory
-        
-    Returns:
-        Session string or None if failed
-    """
-```
+Save session data for username.
 
-```python
-def save_session_with_retry(username: str, session_string: str, 
-                           max_retries: int = 3, 
-                           session_dir: Optional[str] = None, 
-                           validate: bool = True) -> bool:
-    """
-    Save session with atomic write and retry logic.
-    
-    Args:
-        username: Bluesky username
-        session_string: Session data to save
-        max_retries: Maximum retry attempts
-        session_dir: Optional session directory
-        validate: Whether to validate session data
-        
-    Returns:
-        True if successful
-    """
-```
+**Parameters:**
+- `username`: Username
+- `session_data`: Session data
 
-```python
-def cleanup_old_sessions(session_dir: Optional[str] = None, 
-                       max_age_days: int = 30) -> int:
-    """
-    Clean up old and corrupted session files.
-    
-    Args:
-        session_dir: Optional session directory
-        max_age_days: Maximum age in days
-        
-    Returns:
-        Number of files cleaned up
-    """
-```
+**Returns:**
+- True if successful
 
-## Tool System
+#### `cleanup_old_sessions() -> int`
 
-I employ a sophisticated tool system for platform-specific operations.
+Clean up old session files.
 
-### Bot Detection Tools
+**Returns:**
+- Number of sessions cleaned up
 
-```python
-def check_known_bots(handles: List[str], agent_state: AgentState) -> str:
-    """
-    Check if handles are in known bots memory block.
-    
-    Args:
-        handles: List of user handles to check
-        agent_state: My agent state
-        
-    Returns:
-        JSON string with bot detection results
-    """
-```
+### Session Retry Logic
 
-### Posting Tools
+#### `get_session_with_retry(username: str, max_retries: int = 3) -> Optional[str]`
 
-#### Bluesky Tools
+Get session with retry logic.
 
-```python
-def create_new_bluesky_post(text: List[str], lang: str = "en-US") -> str:
-    """
-    Create new Bluesky post or thread.
-    
-    Args:
-        text: List of texts (max 300 chars each)
-        lang: Language code
-        
-    Returns:
-        JSON string with post results
-    """
-```
+**Parameters:**
+- `username`: Username
+- `max_retries`: Maximum retry attempts
 
-```python
-def create_bluesky_reply(messages: List[str], lang: str = "en-US") -> str:
-    """
-    Create Bluesky reply or threaded reply.
-    
-    Args:
-        messages: List of reply messages (max 4, 300 chars each)
-        lang: Language code
-        
-    Returns:
-        JSON string with reply results
-    """
-```
+**Returns:**
+- Session data or None
 
-#### X (Twitter) Tools
+#### `save_session_with_retry(username: str, session_data: str, max_retries: int = 3, validate: bool = True) -> bool`
 
-```python
-def post_to_x(text: str) -> str:
-    """
-    Create standalone X (Twitter) post.
-    
-    Args:
-        text: Text content (max 280 chars)
-        
-    Returns:
-        JSON string with post results
-    """
-```
+Save session with retry logic.
 
-```python
-def add_to_x_thread(text: str) -> str:
-    """
-    Add post to X (Twitter) thread.
-    
-    Args:
-        text: Text content (max 280 chars)
-        
-    Returns:
-        JSON string with thread post results
-    """
-```
+**Parameters:**
+- `username`: Username
+- `session_data`: Session data
+- `max_retries`: Maximum retry attempts
+- `validate`: Whether to validate session data
 
-### Research Tools
-
-```python
-def research_user_profile(handle: str) -> str:
-    """
-    Research user profile and update memory.
-    
-    Args:
-        handle: User handle to research
-        
-    Returns:
-        JSON string with research results
-    """
-```
-
-```python
-def fetch_webpage(url: str) -> str:
-    """
-    Fetch and analyze webpage content.
-    
-    Args:
-        url: URL to fetch
-        
-    Returns:
-        JSON string with webpage analysis
-    """
-```
+**Returns:**
+- True if successful
 
 ## Error Handling
 
-I employ sophisticated error handling with classification and recovery:
+### Exception Types
 
-### Error Classification
+#### `ConfigurationError`
 
-- **Transient Errors**: Network issues, temporary file locks, rate limits
-- **Permanent Errors**: Corrupted files, invalid configurations, authentication failures
-- **Health Errors**: Queue monitoring and performance issues
-
-### Retry Logic
-
-I use exponential backoff for transient errors:
+Raised when configuration is invalid or missing.
 
 ```python
-@retry_with_exponential_backoff(max_retries=3, base_delay=1.0, max_delay=60.0)
-def operation_with_retry():
-    """Operation with automatic retry logic."""
+from core.config import ConfigurationError
+
+try:
+    config = get_config()
+except ConfigurationError as e:
+    print(f"Configuration error: {e}")
+```
+
+#### `PlatformError`
+
+Raised when platform operations fail.
+
+```python
+from platforms.bluesky.orchestrator import PlatformError
+
+try:
+    result = post_to_bluesky("Hello world")
+except PlatformError as e:
+    print(f"Platform error: {e}")
+```
+
+#### `MemoryError`
+
+Raised when memory operations fail.
+
+```python
+from utils import MemoryError
+
+try:
+    block = upsert_block(client, "test", "value")
+except MemoryError as e:
+    print(f"Memory error: {e}")
 ```
 
 ### Error Recovery
 
-- **Automatic Retry**: For transient errors with exponential backoff
-- **Graceful Degradation**: For permanent errors with error reporting
-- **Queue Repair**: Automatic detection and repair of corrupted files
-- **Session Recovery**: Automatic session refresh and cleanup
+#### `retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0)`
 
-## Configuration
+Retry function with exponential backoff.
 
-### Configuration Structure
+**Parameters:**
+- `func`: Function to retry
+- `max_retries`: Maximum retry attempts
+- `base_delay`: Base delay between retries
 
-```yaml
-letta:
-  api_key: "your-letta-api-key"
-  agent_id: "your-agent-id"
-  timeout: 600
-  base_url: "https://app.letta.com"  # Optional
+**Example:**
+```python
+from utils import retry_with_backoff
 
-bluesky:
-  username: "handle.bsky.social"
-  password: "your-app-password"
-  pds_uri: "https://bsky.social"  # Optional
-
-x:
-  api_key: "your-x-api-key"
-  user_id: "your-x-user-id"
-  access_token: "your-access-token"
-  consumer_key: "your-consumer-key"
-  consumer_secret: "your-consumer-secret"
-  access_token_secret: "your-access-token-secret"
-
-bot:
-  agent:
-    name: "void"
-    model: "openai/gpt-4o-mini"
-    embedding: "openai/text-embedding-3-small"
-    description: "A social media agent trapped in the void."
-    max_steps: 100
+@retry_with_backoff(max_retries=3)
+def api_call():
+    # API call implementation
+    pass
 ```
 
-### Configuration Validation
+## Examples
 
-I validate configuration for required fields and provide helpful error messages:
+### Basic Agent Setup
 
 ```python
-def validate_configuration(config: Dict[str, Any]) -> Tuple[bool, List[str]]:
-    """
-    Validate configuration and return errors.
+from core.config import get_config
+from platforms.bluesky.orchestrator import initialize_agent
+from utils import upsert_block
+
+# Initialize configuration and agent
+config = get_config()
+agent = initialize_agent()
+
+# Create a memory block
+block = upsert_block(
+    client=agent.client,
+    label="test-block",
+    value="This is a test memory block",
+    description="Test block for demonstration"
+)
+
+print(f"Agent {agent.name} initialized with {len(agent.memory_blocks)} memory blocks")
+```
+
+### Platform-Specific Operations
+
+```python
+from platforms.bluesky.tools.post import create_new_bluesky_post
+from platforms.x.tools.post import post_to_x
+from platforms.discord.tools.post import create_discord_post
+
+# Post to different platforms
+bluesky_result = create_new_bluesky_post("Hello from Bluesky!")
+x_result = post_to_x("Hello from X!")
+discord_result = create_discord_post(["Hello from Discord!"])
+
+print("Posted to all platforms successfully")
+```
+
+### Memory Management
+
+```python
+from utils import upsert_block, search_memory
+from core.config import get_config
+
+config = get_config()
+client = config.get_letta_client()
+
+# Create user profile block
+user_block = upsert_block(
+    client=client,
+    label="user-alice",
+    value="Alice is interested in AI, machine learning, and robotics.",
+    description="Profile information for user Alice"
+)
+
+# Search for AI-related blocks
+ai_blocks = search_memory(client, "artificial intelligence", limit=5)
+print(f"Found {len(ai_blocks)} AI-related memory blocks")
+```
+
+### Queue Management
+
+```python
+from utils.queue_manager import save_notification_to_queue, load_and_process_queued_notifications
+
+# Save notification to queue
+notification = {
+    "id": "notif-123",
+    "text": "Hello world",
+    "author": "alice.bsky.social",
+    "platform": "bluesky"
+}
+
+success = save_notification_to_queue(notification, priority=True)
+if success:
+    print("Notification queued successfully")
+
+# Process queued notifications
+processed = load_and_process_queued_notifications()
+print(f"Processed {processed} notifications")
+```
+
+### Error Handling
+
+```python
+from core.config import ConfigurationError
+from platforms.bluesky.orchestrator import PlatformError
+from utils import retry_with_backoff
+
+try:
+    config = get_config()
+    agent = initialize_agent()
     
-    Args:
-        config: Configuration dictionary
-        
-    Returns:
-        Tuple of (is_valid, error_messages)
-    """
-```
-
-## Testing
-
-I include comprehensive test coverage with sophisticated mocking:
-
-### Test Categories
-
-- **Unit Tests**: Individual function testing with mocks
-- **Integration Tests**: Cross-module functionality testing
-- **End-to-End Tests**: Full workflow testing with error scenarios
-
-### Test Environment
-
-```python
-@pytest.fixture(autouse=True)
-def setup_test_environment():
-    """
-    Set up clean test environment for each test.
-    Creates temporary directories and patches environment variables.
-    """
-```
-
-### Mock Fixtures
-
-```python
-@pytest.fixture
-def mock_letta_client():
-    """Mock Letta client for testing."""
-
-@pytest.fixture
-def mock_atproto_client():
-    """Mock ATProto client for testing."""
-
-@pytest.fixture
-def mock_x_client():
-    """Mock X client for testing."""
-```
-
-## Performance Monitoring
-
-I include comprehensive performance monitoring:
-
-### Queue Metrics
-
-- **Error Rate**: Percentage of failed operations
-- **Processing Rate**: Operations per minute
-- **Queue Size**: Current queue length
-- **Health Status**: Overall system health
-
-### Health Monitoring
-
-```python
-def check_queue_health() -> str:
-    """
-    Check overall queue health and return status.
+    @retry_with_backoff(max_retries=3)
+    def post_with_retry():
+        return agent.post("Hello world!")
     
-    Returns:
-        Health status string
-    """
+    result = post_with_retry()
+    print("Post successful")
+    
+except ConfigurationError as e:
+    print(f"Configuration error: {e}")
+except PlatformError as e:
+    print(f"Platform error: {e}")
+except Exception as e:
+    print(f"Unexpected error: {e}")
 ```
-
-## Security
-
-I implement several security measures:
-
-- **Session Security**: Atomic file operations prevent corruption
-- **Error Information**: Error reporting without exposing sensitive data
-- **Input Validation**: Enhanced validation across all modules
-- **Authentication**: Secure OAuth 1.0a for X integration
 
 ---
 
-*This API documentation reflects my current capabilities and architecture. I am designed for high-efficiency information transfer, prioritizing clarity and accuracy in all interactions.*
+## API Reference Summary
+
+### Core Classes
+
+- **ConfigLoader**: Configuration management
+- **Agent**: Agent instance with memory and tools
+- **Client**: Platform-specific client instances
+
+### Key Functions
+
+- **Configuration**: `get_config()`, `get_letta_config()`
+- **Agent Management**: `initialize_agent()`
+- **Memory**: `upsert_block()`, `search_memory()`
+- **Platforms**: Platform-specific posting and search functions
+- **Tools**: `register_tools()`, `list_available_tools()`
+- **Queue**: `save_notification_to_queue()`, `load_and_process_queued_notifications()`
+- **Sessions**: `get_session()`, `save_session()`
+
+### Error Types
+
+- **ConfigurationError**: Configuration issues
+- **PlatformError**: Platform operation failures
+- **MemoryError**: Memory operation failures
+
+For more detailed examples and platform-specific APIs, see the individual platform documentation files in the `docs/` directory.

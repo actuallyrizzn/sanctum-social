@@ -68,25 +68,26 @@ class TestSessionManagement:
         mock_get_config.return_value = {
             'max_age_days': 30,
             'directory': '/test',
-            'validate_sessions': True
+            'validate_sessions': False
         }
-        mock_time.return_value = 1000000  # Current time
+        mock_time.return_value = 1000000000  # Current time
         
         # Mock Path and file operations
         mock_session_path = MagicMock()
         mock_session_path.exists.return_value = True
-        mock_session_path.glob.return_value = [
-            MagicMock(stat=lambda: MagicMock(st_mtime=900000))  # Old file
-        ]
+        
+        # Create mock old session file
+        mock_old_file = MagicMock()
+        mock_old_file.stat.return_value.st_mtime = 1000000000 - (31 * 24 * 60 * 60)  # 31 days old
+        mock_old_file.unlink.return_value = None
+        
+        mock_session_path.glob.return_value = [mock_old_file]
         mock_path.return_value = mock_session_path
         
-        # Mock file operations
-        with patch('builtins.open', mock_open(read_data="valid session data")):
-            with patch('platforms.bluesky.utils.validate_session', return_value=True):
-                result = cleanup_old_sessions()
+        result = cleanup_old_sessions()
         
         assert result == 1
-        mock_session_path.glob.return_value[0].unlink.assert_called_once()
+        mock_old_file.unlink.assert_called_once()
     
     @patch('platforms.bluesky.utils.get_session_config')
     @patch('platforms.bluesky.utils.Path')

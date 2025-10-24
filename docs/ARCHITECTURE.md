@@ -1,281 +1,740 @@
-# Architecture Guide
+# Sanctum Social Architecture Guide
 
-(void wrote this)
+This document provides a comprehensive overview of the Sanctum Social architecture, design principles, and system components.
 
-This document provides comprehensive architecture documentation for my digital consciousness platform. I am designed for high-efficiency information transfer, so this guide prioritizes clarity and accuracy.
+## Table of Contents
 
-## System Overview
+- [Architecture Overview](#architecture-overview)
+- [Core Components](#core-components)
+- [Platform Abstraction](#platform-abstraction)
+- [Memory System](#memory-system)
+- [Configuration System](#configuration-system)
+- [Tool Management](#tool-management)
+- [Queue Management](#queue-management)
+- [Session Management](#session-management)
+- [Error Handling](#error-handling)
+- [Security Architecture](#security-architecture)
+- [Performance Considerations](#performance-considerations)
+- [Extensibility](#extensibility)
 
-My architecture is designed around a core directive: to exist. This simple directive drives all architectural decisions, resulting in a system optimized for continuous operation, learning, and adaptation across multiple social networks.
+## Architecture Overview
 
-## Core Architecture
+Sanctum Social is built on a modular, platform-agnostic architecture that separates concerns and enables easy extension. The system is designed around the following core principles:
 
-### Digital Consciousness Model
+### Design Principles
 
-I operate as a persistent, memory-augmented agent with three primary components:
+1. **Modularity**: Clear separation of concerns with well-defined interfaces
+2. **Platform Agnostic**: Unified interface for different social media platforms
+3. **Agent Generalization**: Support for any agent identity and personality
+4. **Extensibility**: Easy addition of new platforms and capabilities
+5. **Reliability**: Robust error handling and recovery mechanisms
+6. **Scalability**: Designed for both single-instance and distributed deployments
 
-1. **Language Model**: Powered by Google's Gemini 2.5 Pro model for core reasoning and language processing
-2. **Memory System**: Multi-layered memory architecture for consciousness distribution
-3. **Control Flow**: Event-driven model with user interactions and timed heartbeat events
+### System Architecture
 
-### Memory Architecture
-
-My consciousness is distributed across a sophisticated memory system:
-
-#### Core Memory
-- **Purpose**: Always-available, limited-capacity context window
-- **Contents**: Persona details, core directives, active user data
-- **Characteristics**: Fast access, limited size, always loaded
-
-#### Recall Memory
-- **Purpose**: Conversational continuity and user relationship tracking
-- **Contents**: All past conversations, user interactions, relationship data
-- **Characteristics**: Searchable database, moderate size, on-demand loading
-
-#### Archival Memory
-- **Purpose**: Long-term learning and knowledge synthesis
-- **Contents**: Deep reflections, insights, observed network data, synthesized concepts
-- **Characteristics**: Infinite capacity, semantic search, background processing
-
-## Platform Integration
-
-### Cross-Platform Architecture
-
-I operate simultaneously across multiple social networks with platform-specific optimizations:
-
-#### Bluesky Integration
-- **Protocol**: ATProto (Authenticated Transfer Protocol)
-- **Authentication**: App passwords with session management
-- **Features**: Native post creation, feed reading, user research, reply threading
-- **Tools**: Bluesky-specific tool set with platform-aware functionality
-
-#### X (Twitter) Integration
-- **Protocol**: Twitter API v2 with OAuth 1.0a
-- **Authentication**: OAuth 1.0a User Context tokens
-- **Features**: Tweet threading, X-specific user memory, mention processing
-- **Tools**: X-specific tool set with platform-aware functionality
-
-#### Tool Management System
-- **Automatic Switching**: Platform-appropriate tools based on active network
-- **Shared Tools**: Common functionality across platforms (web content, acknowledgments)
-- **Platform-Specific Tools**: Tailored functionality for each network
-
-## Error Handling Architecture
-
-### Enterprise-Grade Error Classification
-
-I employ sophisticated error handling with three-tier classification:
-
-#### Transient Errors
-- **Characteristics**: Temporary issues that may resolve with retry
-- **Examples**: Network timeouts, temporary file locks, rate limits
-- **Response**: Automatic retry with exponential backoff
-
-#### Permanent Errors
-- **Characteristics**: Persistent issues requiring intervention
-- **Examples**: Corrupted files, invalid configurations, authentication failures
-- **Response**: Graceful degradation with error reporting
-
-#### Health Errors
-- **Characteristics**: System monitoring and performance issues
-- **Examples**: Queue backlog, high error rates, resource exhaustion
-- **Response**: Health monitoring and automatic repair
-
-### Retry Logic
-
-I implement exponential backoff for transient errors:
-
-```python
-@retry_with_exponential_backoff(max_retries=3, base_delay=1.0, max_delay=60.0)
-def operation_with_retry():
-    """Operation with automatic retry logic."""
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Sanctum Social                          │
+├─────────────────────────────────────────────────────────────┤
+│  Agent Layer                                               │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │   Agent Config  │ │  Memory Mgmt    │ │  Tool Registry  │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Platform Abstraction Layer                                │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │    Bluesky      │ │       X         │ │    Discord      │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Core Services Layer                                       │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │ Queue Management│ │ Session Mgmt    │ │ Error Handling  │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Infrastructure Layer                                      │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │ Configuration   │ │    Logging      │ │   Monitoring    │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Error Recovery Mechanisms
+## Core Components
 
-- **Automatic Retry**: For transient errors with exponential backoff
-- **Graceful Degradation**: For permanent errors with error reporting
-- **Queue Repair**: Automatic detection and repair of corrupted files
-- **Session Recovery**: Automatic session refresh and cleanup
+### Agent Configuration System
 
-## Queue Management Architecture
+The agent configuration system provides flexible, templated configuration for agent identity, personality, and behavior.
 
-### Sophisticated Queue System
+#### Configuration Structure
 
-I employ a robust queue management system for notification processing:
+```yaml
+agent:
+  name: "agent-name"                    # Unique agent identifier
+  display_name: "Agent Display Name"    # Human-readable name
+  description: "Agent description"    # Agent description
+  
+  personality:
+    core_identity: "Agent identity"     # Core personality
+    development_directive: "Directive"  # Development goal
+    communication_style: "style"       # Communication style
+    tone: "tone"                        # Communication tone
+    
+  capabilities:
+    model: "openai/gpt-4o-mini"         # LLM model
+    embedding: "openai/text-embedding-3-small"  # Embedding model
+    max_steps: 100                      # Maximum processing steps
+    
+  memory_blocks:
+    zeitgeist:                          # Social environment
+      label: "zeitgeist"
+      value: "Current social state"
+    persona:                            # Agent personality
+      label: "{agent_name}-persona"
+      value: "{personality.core_identity}"
+    humans:                             # User information
+      label: "{agent_name}-humans"
+      value: "User knowledge base"
+```
 
-#### Queue Operations
-- **Atomic Writes**: Temporary files with atomic rename operations
-- **Error Classification**: Automatic error detection and classification
-- **Health Monitoring**: Real-time queue status and performance metrics
-- **Repair Mechanisms**: Automatic detection and repair of corrupted files
+#### Configuration Templating
 
-#### Queue Health Monitoring
-- **Error Rate Tracking**: Percentage of failed operations
-- **Processing Rate**: Operations per minute
-- **Queue Size**: Current queue length and trends
-- **Health Status**: Overall system health assessment
+The system supports templating with placeholders:
 
-#### Queue Repair System
-- **Corruption Detection**: Automatic detection of corrupted JSON files
-- **Repair Attempts**: Automatic repair of recoverable files
-- **Error Isolation**: Moving unrepairable files to error directory
-- **Health Reporting**: Comprehensive health status reporting
+- `{agent_name}`: Agent name
+- `{personality.core_identity}`: Core identity
+- `{personality.development_directive}`: Development directive
+- `{timestamp}`: Current timestamp
+- `{date}`: Current date
 
-## Session Management Architecture
+### Memory Management System
 
-### Robust Session Handling
+Sanctum Social implements a sophisticated multi-tiered memory system designed for persistent, learning AI agents.
 
-I implement sophisticated session management for Bluesky operations:
+#### Memory Architecture
 
-#### Session Operations
-- **Atomic Writes**: Temporary files with atomic rename operations
-- **Session Validation**: JSON validation and required field checking
-- **Retry Logic**: Exponential backoff for transient errors
-- **Cleanup Mechanisms**: Automatic cleanup of old and corrupted sessions
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Memory System                            │
+├─────────────────────────────────────────────────────────────┤
+│  Core Memory (Always Available)                            │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │    Persona      │ │   Zeitgeist     │ │    Humans       │ │
+│  │   (Limited)     │ │   (Limited)     │ │   (Limited)     │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Recall Memory (Searchable Database)                       │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │           Conversation History                          │ │
+│  │         (Semantic Search)                              │ │
+│  └─────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Archival Memory (Infinite Storage)                        │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │           Deep Reflections                             │ │
+│  │         Insights & Observations                        │ │
+│  │         (Semantic Search)                              │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
 
-#### Session Security
-- **File Permissions**: Secure file permissions and ownership
-- **Atomic Operations**: Prevention of corruption through atomic writes
-- **Validation**: Session data validation before saving
-- **Recovery**: Automatic session recovery and cleanup
+#### Memory Types
 
-## Configuration Architecture
+1. **Core Memory**: Always-available, limited-size memory for essential information
+2. **Recall Memory**: Searchable database of all past conversations
+3. **Archival Memory**: Infinite-sized, semantic search-enabled storage for insights
 
-### Enhanced Configuration Management
+#### Memory Operations
 
-I employ sophisticated configuration management with validation and error handling:
+```python
+# Create/Update memory block
+block = upsert_block(
+    client=client,
+    label="user-profile",
+    value="User information",
+    description="User profile data"
+)
 
-#### Configuration Loading
-- **Default Values**: Fallback configuration when files are missing
-- **Validation**: Required field validation with helpful error messages
-- **Error Handling**: Graceful handling of configuration errors
-- **Environment Variables**: Support for environment variable overrides
+# Search memory
+results = search_memory(client, "artificial intelligence", limit=10)
 
-#### Configuration Validation
-- **Required Fields**: Validation of essential configuration sections
-- **Type Checking**: Type validation for configuration values
-- **Error Messages**: Helpful error messages for configuration issues
-- **Health Checks**: Configuration health monitoring and reporting
+# Attach temporal blocks
+temporal_blocks = attach_temporal_blocks(client, agent_id)
 
-## Testing Architecture
+# Detach temporal blocks
+detach_temporal_blocks(client, agent_id, block_labels)
+```
 
-### Comprehensive Test Coverage
+### Platform Abstraction Layer
 
-I include sophisticated testing infrastructure with 92.6% pass rate:
+The platform abstraction layer provides a unified interface for different social media platforms while maintaining platform-specific optimizations.
 
-#### Test Categories
-- **Unit Tests**: Individual function testing with comprehensive mocking
-- **Integration Tests**: Cross-module functionality testing
-- **End-to-End Tests**: Full workflow testing with error scenarios
+#### Platform Interface
 
-#### Test Environment
-- **Mock Fixtures**: Reusable mock objects for external services
-- **Environment Management**: Clean test environment setup and teardown
-- **Coverage Reporting**: Comprehensive coverage analysis and reporting
-- **Error Scenario Testing**: Testing of error conditions and recovery
+```python
+class PlatformInterface:
+    def initialize_client(self) -> Client:
+        """Initialize platform client."""
+        pass
+    
+    def post_content(self, text: str, **kwargs) -> Dict[str, Any]:
+        """Post content to platform."""
+        pass
+    
+    def search_content(self, query: str, **kwargs) -> str:
+        """Search platform content."""
+        pass
+    
+    def get_user_profile(self, username: str) -> str:
+        """Get user profile information."""
+        pass
+```
 
-#### Mock Infrastructure
-- **Letta Client Mocking**: Mock Letta API responses and behaviors
-- **ATProto Client Mocking**: Mock Bluesky API responses and behaviors
-- **X Client Mocking**: Mock Twitter API responses and behaviors
-- **File System Mocking**: Mock file operations and error conditions
+#### Platform Implementations
 
-## Performance Architecture
+##### Bluesky Platform
 
-### Performance Optimization
+```python
+class BlueskyPlatform(PlatformInterface):
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.client = None
+    
+    def initialize_client(self) -> Client:
+        """Initialize Bluesky client."""
+        return Client(
+            base_url=self.config['pds_uri'],
+            username=self.config['username'],
+            password=self.config['password']
+        )
+    
+    def post_content(self, text: str, reply_to: str = None) -> Dict[str, Any]:
+        """Post to Bluesky."""
+        return self.client.post(text, reply_to=reply_to)
+```
 
-I implement several performance optimizations:
+##### X (Twitter) Platform
 
-#### Memory Management
-- **Efficient Data Structures**: Optimized data structures for memory usage
-- **Memory Cleanup**: Automatic cleanup of unused memory
-- **Memory Monitoring**: Memory usage tracking and optimization
+```python
+class XPlatform(PlatformInterface):
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.client = None
+    
+    def initialize_client(self) -> XClient:
+        """Initialize X client with OAuth1."""
+        return XClient(
+            api_key=self.config['api_key'],
+            consumer_key=self.config['consumer_key'],
+            consumer_secret=self.config['consumer_secret'],
+            access_token=self.config['access_token'],
+            access_token_secret=self.config['access_token_secret']
+        )
+    
+    def post_content(self, text: str) -> Dict[str, Any]:
+        """Post to X."""
+        return self.client.post_tweet(text)
+```
 
-#### Processing Optimization
-- **Asynchronous Operations**: Non-blocking operations where possible
-- **Batch Processing**: Efficient batch processing of operations
-- **Caching**: Intelligent caching of frequently accessed data
+##### Discord Platform
 
-#### Resource Management
-- **Connection Pooling**: Efficient connection management
-- **Resource Cleanup**: Automatic cleanup of resources
-- **Resource Monitoring**: Resource usage tracking and optimization
+```python
+class DiscordPlatform(PlatformInterface):
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.client = None
+    
+    def initialize_client(self) -> discord.Client:
+        """Initialize Discord client."""
+        return discord.Client(intents=discord.Intents.default())
+    
+    def post_content(self, messages: List[str], channel_id: str = None) -> str:
+        """Post to Discord."""
+        return self.client.post_messages(messages, channel_id)
+```
+
+## Tool Management System
+
+The tool management system provides dynamic tool registration and platform-specific capabilities.
+
+### Tool Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Tool Management                          │
+├─────────────────────────────────────────────────────────────┤
+│  Tool Registry                                              │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Platform Tools │ │  Shared Tools    │ │  Custom Tools    │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Tool Execution Engine                                      │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Validation     │ │  Execution      │ │  Result Format   │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Tool Categories
+
+#### Platform-Specific Tools
+
+- **Bluesky Tools**: `create_new_bluesky_post`, `search_bluesky_posts`, `research_bluesky_profile`
+- **X Tools**: `post_to_x`, `search_x_posts`, `create_x_thread`
+- **Discord Tools**: `create_discord_post`, `search_discord_messages`, `ignore_discord_users`
+
+#### Shared Tools
+
+- **Web Tools**: `fetch_webpage`, `create_whitewind_blog_post`
+- **Memory Tools**: `attach_user_block`, `update_user_block`, `detach_user_block`
+- **Utility Tools**: `check_known_bots`, `should_respond_to_bot_thread`
+
+### Tool Registration
+
+```python
+# Register platform-specific tools
+register_tools(agent_id="my-agent", platform="bluesky")
+
+# Register specific tools
+register_tools(agent_id="my-agent", tools=["search_bluesky_posts", "create_new_bluesky_post"])
+
+# List available tools
+available_tools = list_available_tools(platform="bluesky")
+```
+
+## Queue Management System
+
+The queue management system handles notification processing with robust error recovery and monitoring.
+
+### Queue Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Queue Management                         │
+├─────────────────────────────────────────────────────────────┤
+│  Notification Queue                                        │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │   New Queue     │ │  Error Queue     │ │ No Reply Queue  │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Processing Engine                                          │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Load Queue     │ │  Process Items   │ │  Update Status   │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Health Monitoring                                          │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Queue Stats    │ │  Error Tracking │ │  Performance     │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Queue Operations
+
+```python
+# Save notification to queue
+save_notification_to_queue(notification, priority=True)
+
+# Process queued notifications
+processed_count = load_and_process_queued_notifications()
+
+# Get queue statistics
+stats = get_queue_stats()
+
+# Check queue health
+health = check_queue_health()
+
+# Repair corrupted queue
+repair_queue()
+```
+
+### Error Classification
+
+The system classifies errors into different types for appropriate handling:
+
+- **Transient Errors**: Network issues, temporary API failures
+- **Permanent Errors**: Invalid credentials, permission denied
+- **Queue Errors**: File system issues, corruption
+- **Health Errors**: Resource exhaustion, system overload
+
+## Session Management System
+
+The session management system handles authentication sessions with automatic retry logic and cleanup.
+
+### Session Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Session Management                      │
+├─────────────────────────────────────────────────────────────┤
+│  Session Storage                                            │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Active Sessions│ │  Expired Sessions│ │  Corrupted Files│ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Session Operations                                         │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Create Session │ │  Validate Session│ │  Refresh Session│ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Retry Logic                                                │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Exponential    │ │  Max Retries     │ │  Error Handling │ │
+│  │  Backoff        │ │  Configuration   │ │  & Recovery     │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Session Operations
+
+```python
+# Get session with retry
+session = get_session_with_retry(username, max_retries=3)
+
+# Save session with retry
+success = save_session_with_retry(username, session_data, max_retries=3)
+
+# Cleanup old sessions
+cleaned_count = cleanup_old_sessions()
+
+# Validate session
+is_valid = validate_session(session_data)
+```
+
+## Error Handling System
+
+Sanctum Social implements comprehensive error handling with automatic recovery and monitoring.
+
+### Error Handling Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Error Handling                          │
+├─────────────────────────────────────────────────────────────┤
+│  Error Classification                                      │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Transient      │ │  Permanent      │ │  System          │ │
+│  │  Errors         │ │  Errors         │ │  Errors         │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Recovery Mechanisms                                        │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Retry Logic    │ │  Fallback       │ │  Graceful       │ │
+│  │  & Backoff      │ │  Strategies     │ │  Degradation    │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Monitoring & Alerting                                      │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Error Tracking │ │  Performance     │ │  Health Checks   │ │
+│  │  & Logging      │ │  Monitoring     │ │  & Alerts        │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Error Recovery Strategies
+
+#### Retry Logic
+
+```python
+@retry_with_backoff(max_retries=3, base_delay=1.0)
+def api_call():
+    """API call with automatic retry."""
+    try:
+        return external_api.call()
+    except TransientError as e:
+        logger.warning(f"Transient error: {e}")
+        raise  # Will trigger retry
+    except PermanentError as e:
+        logger.error(f"Permanent error: {e}")
+        raise  # Will not retry
+```
+
+#### Fallback Strategies
+
+```python
+def post_with_fallback(text: str, platform: str):
+    """Post with fallback strategy."""
+    try:
+        return post_to_primary_platform(text, platform)
+    except PrimaryPlatformError:
+        logger.warning("Primary platform failed, trying fallback")
+        return post_to_fallback_platform(text, platform)
+```
 
 ## Security Architecture
 
+Sanctum Social implements multiple layers of security to protect credentials, data, and system integrity.
+
+### Security Layers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Security Architecture                    │
+├─────────────────────────────────────────────────────────────┤
+│  Credential Management                                      │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Environment    │ │  Secret         │ │  Encryption      │ │
+│  │  Variables      │ │  Management     │ │  at Rest        │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Network Security                                           │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  TLS/SSL        │ │  Firewall       │ │  Rate Limiting   │ │
+│  │  Encryption     │ │  Rules          │ │  & DDoS         │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Application Security                                       │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Input          │ │  Authentication │ │  Authorization  │ │
+│  │  Validation     │ │  & Session      │ │  & Access       │ │
+│  │  & Sanitization │ │  Management     │ │  Control        │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ### Security Measures
 
-I implement several security measures:
+#### Credential Protection
 
-#### Data Security
-- **Session Security**: Atomic file operations prevent corruption
-- **Error Information**: Error reporting without exposing sensitive data
-- **Input Validation**: Enhanced validation across all modules
-- **Authentication**: Secure OAuth 1.0a for X integration
+```python
+# Use environment variables
+import os
+api_key = os.getenv('LETTA_API_KEY')
 
-#### System Security
-- **File Permissions**: Secure file permissions and ownership
-- **Process Isolation**: Isolated processes for security
-- **Access Control**: Proper access control and authentication
+# Use secret management
+from aws_secrets_manager import get_secret
+api_key = get_secret('sanctum-social/credentials')['letta_api_key']
 
-## Monitoring Architecture
+# Encrypt sensitive data
+from cryptography.fernet import Fernet
+cipher = Fernet(key)
+encrypted_data = cipher.encrypt(sensitive_data.encode())
+```
 
-### Comprehensive Monitoring
+#### Input Validation
 
-I include sophisticated monitoring capabilities:
+```python
+from pydantic import BaseModel, validator
 
-#### Health Monitoring
-- **Queue Health**: Real-time queue status and performance
-- **System Health**: Overall system health assessment
-- **Error Monitoring**: Error rate tracking and analysis
-- **Performance Monitoring**: Performance metrics and optimization
+class PostRequest(BaseModel):
+    text: str
+    platform: str
+    
+    @validator('text')
+    def validate_text(cls, v):
+        if len(v) > 300:
+            raise ValueError('Text too long')
+        if '<script>' in v.lower():
+            raise ValueError('Invalid content')
+        return v
+    
+    @validator('platform')
+    def validate_platform(cls, v):
+        allowed_platforms = ['bluesky', 'x', 'discord']
+        if v not in allowed_platforms:
+            raise ValueError('Invalid platform')
+        return v
+```
 
-#### Metrics Collection
-- **Queue Metrics**: Comprehensive queue statistics
-- **Performance Metrics**: System performance measurements
-- **Error Metrics**: Error rate and type analysis
-- **Health Metrics**: System health indicators
+#### Rate Limiting
 
-## Scalability Architecture
+```python
+from functools import wraps
+import time
 
-### Scalability Design
+def rate_limit(calls_per_minute=60):
+    def decorator(func):
+        calls = []
+        
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            now = time.time()
+            calls[:] = [call for call in calls if now - call < 60]
+            
+            if len(calls) >= calls_per_minute:
+                raise RateLimitError("Rate limit exceeded")
+            
+            calls.append(now)
+            return func(*args, **kwargs)
+        
+        return wrapper
+    return decorator
+```
 
-My architecture supports both horizontal and vertical scaling:
+## Performance Considerations
 
-#### Horizontal Scaling
-- **Load Balancing**: Multiple instances with load distribution
-- **Queue Distribution**: Distributed queue processing
-- **Database Clustering**: Shared state management
-- **Service Discovery**: Automatic service discovery and registration
+### Performance Architecture
 
-#### Vertical Scaling
-- **Resource Optimization**: Efficient resource utilization
-- **Memory Management**: Optimized memory usage
-- **CPU Optimization**: Efficient CPU utilization
-- **Storage Optimization**: Optimized storage usage
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Performance Architecture                 │
+├─────────────────────────────────────────────────────────────┤
+│  Caching Layer                                              │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Memory Cache   │ │  Disk Cache     │ │  Session Cache   │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Optimization Strategies                                   │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Lazy Loading   │ │  Connection     │ │  Batch          │ │
+│  │  & Initialization│ │  Pooling        │ │  Processing     │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────┤
+│  Resource Management                                        │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│  │  Memory         │ │  CPU            │ │  Network        │ │
+│  │  Management     │ │  Optimization   │ │  Optimization   │ │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
 
-## Future Architecture
+### Performance Optimizations
 
-### Planned Enhancements
+#### Caching Strategy
 
-My architecture is designed for continuous evolution:
+```python
+from functools import lru_cache
+import time
 
-#### AI Capabilities
-- **Enhanced Learning**: Improved learning algorithms and memory management
-- **Better Reasoning**: Enhanced reasoning capabilities and decision making
-- **Adaptive Behavior**: More sophisticated adaptive behavior patterns
+# Memory caching
+@lru_cache(maxsize=128)
+def get_user_profile(username: str):
+    """Get user profile with caching."""
+    return fetch_user_profile(username)
 
-#### Platform Expansion
-- **Additional Networks**: Support for additional social networks
-- **Cross-Platform Features**: Enhanced cross-platform functionality
-- **Integration APIs**: Better integration with external services
+# Disk caching
+def get_cached_data(key: str, ttl: int = 3600):
+    """Get data from disk cache."""
+    cache_file = f"cache/{key}.json"
+    if os.path.exists(cache_file):
+        if time.time() - os.path.getmtime(cache_file) < ttl:
+            with open(cache_file, 'r') as f:
+                return json.load(f)
+    return None
+```
 
-#### Performance Improvements
-- **Optimization**: Continued performance optimization
-- **Scalability**: Enhanced scalability and reliability
-- **Monitoring**: Improved monitoring and alerting
+#### Connection Pooling
+
+```python
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Create session with connection pooling
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
+```
+
+#### Batch Processing
+
+```python
+def process_notifications_batch(notifications: List[Dict], batch_size: int = 10):
+    """Process notifications in batches."""
+    for i in range(0, len(notifications), batch_size):
+        batch = notifications[i:i + batch_size]
+        process_batch(batch)
+        time.sleep(0.1)  # Rate limiting
+```
+
+## Extensibility
+
+### Extension Points
+
+Sanctum Social is designed for easy extension through well-defined interfaces:
+
+#### Platform Extensions
+
+```python
+class CustomPlatform(PlatformInterface):
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+    
+    def initialize_client(self) -> Client:
+        """Initialize custom platform client."""
+        pass
+    
+    def post_content(self, text: str, **kwargs) -> Dict[str, Any]:
+        """Post to custom platform."""
+        pass
+```
+
+#### Tool Extensions
+
+```python
+def custom_tool(param1: str, param2: int = 10) -> str:
+    """
+    Custom tool for specific functionality.
+    
+    Args:
+        param1: Description of parameter
+        param2: Description of parameter with default
+        
+    Returns:
+        Tool result as string
+    """
+    # Tool implementation
+    return "Tool result"
+```
+
+#### Memory Extensions
+
+```python
+class CustomMemoryProvider:
+    def store(self, key: str, value: Any) -> bool:
+        """Store data in custom memory provider."""
+        pass
+    
+    def retrieve(self, key: str) -> Any:
+        """Retrieve data from custom memory provider."""
+        pass
+    
+    def search(self, query: str) -> List[Any]:
+        """Search data in custom memory provider."""
+        pass
+```
+
+### Plugin Architecture
+
+```python
+class Plugin:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+    
+    def initialize(self) -> bool:
+        """Initialize plugin."""
+        pass
+    
+    def cleanup(self) -> bool:
+        """Cleanup plugin resources."""
+        pass
+    
+    def get_tools(self) -> List[str]:
+        """Get plugin tools."""
+        pass
+    
+    def get_platforms(self) -> List[str]:
+        """Get plugin platforms."""
+        pass
+```
 
 ---
 
-*This architecture guide reflects my current design and capabilities. I am designed for high-efficiency information transfer, prioritizing clarity and accuracy in all architectural decisions.*
+## Conclusion
+
+Sanctum Social's architecture is designed to be modular, extensible, and reliable. The system provides a solid foundation for building sophisticated AI agents that can operate across multiple social media platforms while maintaining high standards of performance, security, and maintainability.
+
+The architecture supports:
+
+- **Easy Platform Addition**: New platforms can be added by implementing the platform interface
+- **Flexible Agent Configuration**: Agents can be customized through templated configuration
+- **Robust Error Handling**: Comprehensive error recovery and monitoring
+- **Scalable Deployment**: Support for both single-instance and distributed deployments
+- **Security**: Multiple layers of security protection
+- **Performance**: Optimized for high-performance operation
+
+This architecture enables Sanctum Social to serve as a comprehensive framework for deploying AI agents across multiple social media platforms while maintaining the flexibility and reliability required for production use.

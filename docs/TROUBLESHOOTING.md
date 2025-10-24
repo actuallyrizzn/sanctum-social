@@ -1,798 +1,781 @@
-# Troubleshooting Guide
+# Sanctum Social Troubleshooting Guide
 
-(void wrote this)
+This guide provides solutions for common issues encountered when using Sanctum Social.
 
-This document provides comprehensive troubleshooting guidance for my digital consciousness platform. I am designed for high-efficiency information transfer, so this guide prioritizes clarity and accuracy in problem resolution.
+## Table of Contents
+
+- [Quick Diagnostics](#quick-diagnostics)
+- [Configuration Issues](#configuration-issues)
+- [Platform Connection Issues](#platform-connection-issues)
+- [Memory and Storage Issues](#memory-and-storage-issues)
+- [Queue and Processing Issues](#queue-and-processing-issues)
+- [Performance Issues](#performance-issues)
+- [Error Messages](#error-messages)
+- [Debugging Tools](#debugging-tools)
+- [Recovery Procedures](#recovery-procedures)
+- [Getting Help](#getting-help)
 
 ## Quick Diagnostics
 
-### System Status Check
+### Health Check Script
 
-Run these commands to quickly assess my health:
+Run the built-in health check to identify common issues:
 
 ```bash
-# Check if I'm running
+python scripts/health_check.py
+```
+
+This script checks:
+- Configuration validity
+- Platform connectivity
+- Memory system health
+- Queue status
+- System resources
+
+### Configuration Validation
+
+Validate your configuration:
+
+```bash
+python scripts/test_config.py
+```
+
+### System Status
+
+Check system status:
+
+```bash
+# Check running processes
 ps aux | grep python
 
-# Check service status (if using systemd)
-sudo systemctl status void-bsky.service
-sudo systemctl status void-x.service
+# Check disk space
+df -h
 
-# Check queue health
-python queue_manager.py health
+# Check memory usage
+free -h
 
-# Check configuration
-python test_config.py
+# Check log files
+tail -f logs/sanctum-social.log
 ```
-
-### Common Issues Matrix
-
-| Issue | Symptoms | Quick Fix | Detailed Solution |
-|-------|----------|-----------|-------------------|
-| Service won't start | Service fails to start | Check logs | [Service Issues](#service-issues) |
-| Configuration errors | Config validation fails | Run test_config.py | [Configuration Issues](#configuration-issues) |
-| Queue problems | Queue operations fail | Run queue repair | [Queue Issues](#queue-issues) |
-| Session problems | Bluesky auth fails | Check session files | [Session Issues](#session-issues) |
-| API errors | Letta/X/Bluesky API fails | Check API keys | [API Issues](#api-issues) |
-| Memory issues | High memory usage | Check processes | [Performance Issues](#performance-issues) |
-
-## Service Issues
-
-### Service Won't Start
-
-#### Symptoms
-- Service fails to start
-- Error messages in systemd logs
-- Process not running
-
-#### Diagnosis
-```bash
-# Check service status
-sudo systemctl status void-bsky.service
-
-# Check recent logs
-sudo journalctl -u void-bsky.service --since "1 hour ago"
-
-# Check if Python is available
-which python3
-python3 --version
-```
-
-#### Solutions
-
-1. **Python Path Issues**
-   ```bash
-   # Check virtual environment
-   source venv/bin/activate
-   which python
-   
-   # Update systemd service with correct path
-   sudo nano /etc/systemd/system/void-bsky.service
-   ```
-
-2. **Permission Issues**
-   ```bash
-   # Check file permissions
-   ls -la bsky.py
-   ls -la config.yaml
-   
-   # Fix permissions
-   sudo chown void:void bsky.py config.yaml
-   sudo chmod +x bsky.py
-   ```
-
-3. **Dependency Issues**
-   ```bash
-   # Check if virtual environment is activated
-   source venv/bin/activate
-   
-   # Reinstall dependencies
-   pip install -r requirements.txt
-   ```
-
-4. **Configuration Issues**
-   ```bash
-   # Test configuration
-   python test_config.py
-   
-   # Check configuration file
-   cat config.yaml
-   ```
-
-### Service Keeps Restarting
-
-#### Symptoms
-- Service starts but immediately restarts
-- High restart count in systemd status
-- Logs show repeated startup attempts
-
-#### Diagnosis
-```bash
-# Check restart count
-sudo systemctl status void-bsky.service
-
-# Check logs for errors
-sudo journalctl -u void-bsky.service --since "10 minutes ago" -f
-```
-
-#### Solutions
-
-1. **Configuration Errors**
-   ```bash
-   # Test configuration
-   python test_config.py
-   
-   # Check for missing required fields
-   python -c "from config_loader import ConfigLoader; cl = ConfigLoader(); print(cl.is_config_valid())"
-   ```
-
-2. **API Connection Issues**
-   ```bash
-   # Test Letta connection
-   python -c "from letta import Letta; client = Letta(token='your-token'); print(client.agents.list())"
-   
-   # Test Bluesky connection
-   python -c "from atproto import AtProtoClient; client = AtProtoClient(); print('Bluesky client created')"
-   ```
-
-3. **Resource Issues**
-   ```bash
-   # Check system resources
-   free -h
-   df -h
-   
-   # Check for memory leaks
-   ps aux --sort=-%mem | head -10
-   ```
 
 ## Configuration Issues
 
-### Configuration Validation Errors
+### Missing Configuration File
 
-#### Symptoms
-- `python test_config.py` fails
-- Configuration validation errors
-- Missing required fields
+**Error**: `FileNotFoundError: config.yaml not found`
 
-#### Diagnosis
+**Solution**:
 ```bash
-# Run configuration test
-python test_config.py
+# Copy the template configuration
+cp config/agent.yaml config.yaml
 
-# Check configuration file
-cat config.yaml
-
-# Validate configuration programmatically
-python -c "from config_loader import validate_configuration; import yaml; config = yaml.safe_load(open('config.yaml')); print(validate_configuration(config))"
+# Edit with your credentials
+nano config.yaml
 ```
 
-#### Solutions
+### Invalid YAML Syntax
 
-1. **Missing Required Fields**
-   ```yaml
-   # Ensure all required sections exist
-   letta:
-     api_key: "your-letta-api-key"
-     agent_id: "your-agent-id"
-   
-   bluesky:
-     username: "your-handle.bsky.social"
-     password: "your-app-password"
-   
-   bot:
-     agent:
-       name: "void"
-   ```
+**Error**: `yaml.scanner.ScannerError: while scanning for the next token`
 
-2. **Invalid Field Values**
-   ```bash
-   # Check field types and values
-   python -c "from config_loader import ConfigLoader; cl = ConfigLoader(); print(cl.config)"
-   ```
+**Solution**:
+```bash
+# Validate YAML syntax
+python -c "import yaml; yaml.safe_load(open('config.yaml'))"
 
-3. **File Not Found**
-   ```bash
-   # Copy example configuration
-   cp config/agent.yaml config.yaml
-   
-   # Edit configuration
-   nano config.yaml
-   ```
+# Check for common YAML issues:
+# - Missing quotes around strings with special characters
+# - Incorrect indentation (use spaces, not tabs)
+# - Missing colons after keys
+```
+
+### Missing Required Fields
+
+**Error**: `ConfigurationError: Missing required field 'letta.api_key'`
+
+**Solution**:
+```bash
+# Check required fields in config.yaml
+grep -E "(api_key|username|password)" config.yaml
+
+# Set missing fields
+nano config.yaml
+```
 
 ### Environment Variable Issues
 
-#### Symptoms
-- Environment variables not loaded
-- API keys not found
-- Configuration not reading from environment
+**Error**: `Environment variable not found`
 
-#### Diagnosis
+**Solution**:
 ```bash
 # Check environment variables
-env | grep -E "(LETTA|BSKY|X_)"
+env | grep -E "(LETTA|BSKY|X_|DISCORD)"
 
-# Check if variables are set
-echo $LETTA_API_KEY
-echo $BSKY_USERNAME
+# Set environment variables
+export LETTA_API_KEY="your-api-key"
+export BSKY_USERNAME="your-handle.bsky.social"
+export BSKY_PASSWORD="your-app-password"
+
+# Or create .env file
+echo "LETTA_API_KEY=your-api-key" > .env
+echo "BSKY_USERNAME=your-handle.bsky.social" >> .env
+echo "BSKY_PASSWORD=your-app-password" >> .env
 ```
 
-#### Solutions
+## Platform Connection Issues
 
-1. **Set Environment Variables**
-   ```bash
-   # Set in shell
-   export LETTA_API_KEY="your-key"
-   export BSKY_USERNAME="your-handle.bsky.social"
-   
-   # Set in systemd service
-   sudo nano /etc/systemd/system/void-bsky.service
-   # Add Environment=LETTA_API_KEY=your-key
-   ```
+### Bluesky Connection Issues
 
-2. **Use .env File**
-   ```bash
-   # Create .env file
-   echo "LETTA_API_KEY=your-key" > .env
-   echo "BSKY_USERNAME=your-handle.bsky.social" >> .env
-   ```
+#### Authentication Failed
 
-## Queue Issues
+**Error**: `Authentication failed for Bluesky`
 
-### Queue Operations Failing
+**Solutions**:
+```bash
+# Check credentials
+python -c "
+from core.config import get_config
+config = get_config()
+print('Username:', config.get('platforms.bluesky.username'))
+print('PDS URI:', config.get('platforms.bluesky.pds_uri'))
+"
 
-#### Symptoms
-- Queue operations fail with errors
-- Notifications not being processed
-- Queue files corrupted
+# Test manual login
+python -c "
+from platforms.bluesky.utils import default_login
+try:
+    client = default_login()
+    print('Login successful')
+except Exception as e:
+    print('Login failed:', e)
+"
 
-#### Diagnosis
+# Verify app password
+# Go to https://bsky.app/settings/app-passwords
+# Generate a new app password if needed
+```
+
+#### Network Issues
+
+**Error**: `ConnectionError: Failed to connect to Bluesky`
+
+**Solutions**:
+```bash
+# Test network connectivity
+ping bsky.social
+
+# Check DNS resolution
+nslookup bsky.social
+
+# Test with different PDS URI
+# Edit config.yaml and try:
+# pds_uri: "https://bsky.social"
+# pds_uri: "https://bsky.app"
+```
+
+#### Rate Limiting
+
+**Error**: `Rate limit exceeded`
+
+**Solutions**:
+```bash
+# Check rate limit settings
+python scripts/queue_manager.py stats
+
+# Reduce processing frequency
+# Edit config.yaml:
+bot:
+  fetch_notifications_delay: 30  # Increase delay
+  max_processed_notifications: 10  # Reduce batch size
+```
+
+### X (Twitter) Connection Issues
+
+#### API Key Issues
+
+**Error**: `Invalid API key`
+
+**Solutions**:
+```bash
+# Verify API credentials
+python -c "
+from platforms.x.orchestrator import create_x_client
+try:
+    client = create_x_client()
+    print('X client created successfully')
+except Exception as e:
+    print('X client creation failed:', e)
+"
+
+# Check API key permissions
+# Go to https://developer.x.com/en/portal/dashboard
+# Ensure app has "Read and write" permissions
+```
+
+#### OAuth Issues
+
+**Error**: `OAuth authentication failed`
+
+**Solutions**:
+```bash
+# Verify OAuth tokens
+python -c "
+import os
+print('API Key:', os.getenv('X_API_KEY'))
+print('Consumer Key:', os.getenv('X_CONSUMER_KEY'))
+print('Access Token:', os.getenv('X_ACCESS_TOKEN'))
+"
+
+# Regenerate OAuth tokens
+# Go to https://developer.x.com/en/portal/dashboard
+# Generate new OAuth 1.0a User Context tokens
+```
+
+#### Rate Limiting
+
+**Error**: `Rate limit exceeded for X API`
+
+**Solutions**:
+```bash
+# Check X rate limits
+python -c "
+from platforms.x.orchestrator import XClient
+client = XClient()
+print('Rate limit status:', client.get_rate_limit_status())
+"
+
+# Implement rate limiting
+# Edit config.yaml:
+platforms:
+  x:
+    behavior:
+      rate_limiting: "strict"
+      downrank_response_rate: 0.1
+```
+
+### Discord Connection Issues
+
+#### Bot Token Issues
+
+**Error**: `Invalid Discord bot token`
+
+**Solutions**:
+```bash
+# Verify bot token
+python -c "
+from platforms.discord.orchestrator import create_discord_client
+try:
+    client = create_discord_client()
+    print('Discord client created successfully')
+except Exception as e:
+    print('Discord client creation failed:', e)
+"
+
+# Check bot permissions
+# Go to https://discord.com/developers/applications
+# Ensure bot has necessary permissions
+```
+
+#### Guild Issues
+
+**Error**: `Guild not found`
+
+**Solutions**:
+```bash
+# Verify guild ID
+python -c "
+from platforms.discord.orchestrator import create_discord_client
+client = create_discord_client()
+guild = client.get_guild(int(os.getenv('DISCORD_GUILD_ID')))
+print('Guild found:', guild.name if guild else 'Not found')
+"
+
+# Check guild ID format
+# Guild ID should be a numeric string
+```
+
+## Memory and Storage Issues
+
+### Memory Block Issues
+
+#### Memory Block Creation Failed
+
+**Error**: `Failed to create memory block`
+
+**Solutions**:
+```bash
+# Check memory system health
+python scripts/memory_monitor.py
+
+# Clean up corrupted memory blocks
+python scripts/memory_cleanup.py
+
+# Check Letta connection
+python -c "
+from core.config import get_letta_config
+config = get_letta_config()
+print('Letta config:', config)
+"
+```
+
+#### Memory Search Issues
+
+**Error**: `Memory search failed`
+
+**Solutions**:
+```bash
+# Test memory search
+python -c "
+from utils import search_memory
+from core.config import get_config
+config = get_config()
+client = config.get_letta_client()
+results = search_memory(client, 'test query', limit=5)
+print('Search results:', len(results))
+"
+
+# Rebuild memory index
+python scripts/memory_rebuild.py
+```
+
+### Storage Issues
+
+#### Disk Space Issues
+
+**Error**: `No space left on device`
+
+**Solutions**:
+```bash
+# Check disk space
+df -h
+
+# Clean up old files
+find data/ -name "*.log" -mtime +30 -delete
+find data/ -name "*.json" -mtime +7 -delete
+
+# Clean up cache
+rm -rf data/cache/*
+
+# Clean up old sessions
+python scripts/session_cleanup.py
+```
+
+#### Permission Issues
+
+**Error**: `Permission denied`
+
+**Solutions**:
+```bash
+# Check file permissions
+ls -la data/
+
+# Fix permissions
+chmod -R 755 data/
+chown -R $USER:$USER data/
+
+# Check directory ownership
+ls -la data/queues/
+```
+
+## Queue and Processing Issues
+
+### Queue Corruption
+
+**Error**: `Queue file corrupted`
+
+**Solutions**:
 ```bash
 # Check queue health
-python queue_manager.py health
+python scripts/queue_manager.py health
 
-# List queue contents
-python queue_manager.py list
+# Repair queue
+python scripts/queue_manager.py repair
 
-# Check queue statistics
-python queue_manager.py stats
+# Reset queue (WARNING: This will lose queued items)
+python scripts/queue_manager.py reset
 ```
 
-#### Solutions
+### Processing Stuck
 
-1. **Queue Corruption**
-   ```bash
-   # Repair corrupted files
-   python queue_manager.py repair
-   
-   # Check repair results
-   python queue_manager.py health
-   ```
+**Error**: `Processing stuck on notification`
 
-2. **Permission Issues**
-   ```bash
-   # Check queue directory permissions
-   ls -la data/queues/bluesky/
-   
-   # Fix permissions
-   sudo chown -R void:void data/queues/bluesky/
-   sudo chmod -R 755 data/queues/bluesky/
-   ```
-
-3. **Disk Space Issues**
-   ```bash
-   # Check disk space
-   df -h
-   
-   # Clean up old files
-   find data/queues/bluesky/ -name "*.json" -mtime +30 -delete
-   ```
-
-### Queue Health Issues
-
-#### Symptoms
-- High error rates
-- Queue backlog
-- Processing delays
-
-#### Diagnosis
+**Solutions**:
 ```bash
-# Check detailed health
-python queue_manager.py health
+# Check processing status
+python scripts/queue_manager.py stats
 
-# Check error rates
-python -c "from queue_manager import QueueHealthMonitor; monitor = QueueHealthMonitor(); print(f'Error rate: {monitor.get_error_rate():.2%}')"
+# Clear stuck notifications
+python scripts/queue_manager.py clear-stuck
+
+# Restart processing
+python scripts/queue_manager.py restart
 ```
 
-#### Solutions
+### Queue Performance Issues
 
-1. **High Error Rates**
-   ```bash
-   # Check for common error patterns
-   grep -r "ERROR" data/queues/bluesky/
-   
-   # Repair corrupted files
-   python queue_manager.py repair
-   ```
+**Error**: `Queue processing too slow`
 
-2. **Queue Backlog**
-   ```bash
-   # Check queue size
-   python queue_manager.py stats
-   
-   # Process backlog manually
-   python -c "from bsky import load_and_process_queued_notifications; load_and_process_queued_notifications()"
-   ```
-
-## Session Issues
-
-### Bluesky Authentication Failures
-
-#### Symptoms
-- Bluesky login fails
-- Session errors
-- Authentication timeouts
-
-#### Diagnosis
+**Solutions**:
 ```bash
-# Check session files
-ls -la sessions/
+# Optimize queue settings
+# Edit config.yaml:
+bot:
+  fetch_notifications_delay: 5
+  max_processed_notifications: 50
+  max_notification_pages: 3
 
-# Check session content
-cat sessions/your-handle.bsky.social.json
+# Check system resources
+htop
+iotop
 ```
-
-#### Solutions
-
-1. **Invalid Session Data**
-   ```bash
-   # Remove corrupted session
-   rm sessions/your-handle.bsky.social.json
-   
-   # Let system recreate session
-   python bsky.py
-   ```
-
-2. **Session Expiration**
-   ```bash
-   # Clean up old sessions
-   python -c "from bsky_utils import cleanup_old_sessions; cleanup_old_sessions()"
-   ```
-
-3. **Permission Issues**
-   ```bash
-   # Check session directory permissions
-   ls -la sessions/
-   
-   # Fix permissions
-   sudo chown -R void:void sessions/
-   sudo chmod -R 700 sessions/
-   ```
-
-### Session Management Errors
-
-#### Symptoms
-- Session save failures
-- Session validation errors
-- Atomic write failures
-
-#### Diagnosis
-```bash
-# Test session operations
-python -c "from bsky_utils import get_session, save_session; print('Session test')"
-```
-
-#### Solutions
-
-1. **File System Issues**
-   ```bash
-   # Check disk space
-   df -h
-   
-   # Check file system errors
-   dmesg | grep -i error
-   ```
-
-2. **Concurrent Access Issues**
-   ```bash
-   # Check for multiple processes
-   ps aux | grep python
-   
-   # Kill duplicate processes
-   pkill -f bsky.py
-   ```
-
-## API Issues
-
-### Letta API Problems
-
-#### Symptoms
-- Letta API calls fail
-- Authentication errors
-- Rate limit exceeded
-
-#### Diagnosis
-```bash
-# Test Letta connection
-python -c "from letta import Letta; client = Letta(token='your-token'); print(client.agents.list())"
-
-# Check API key
-echo $LETTA_API_KEY
-```
-
-#### Solutions
-
-1. **Invalid API Key**
-   ```bash
-   # Verify API key in Letta dashboard
-   # Update configuration
-   nano config.yaml
-   ```
-
-2. **Rate Limiting**
-   ```bash
-   # Check rate limit status
-   python -c "from letta import Letta; client = Letta(token='your-token'); print('Rate limit check')"
-   
-   # Implement backoff
-   # Already handled in code with exponential backoff
-   ```
-
-3. **Network Issues**
-   ```bash
-   # Test network connectivity
-   ping app.letta.com
-   
-   # Check DNS resolution
-   nslookup app.letta.com
-   ```
-
-### Bluesky API Problems
-
-#### Symptoms
-- Bluesky API calls fail
-- Feed reading errors
-- Post creation failures
-
-#### Diagnosis
-```bash
-# Test Bluesky connection
-python -c "from atproto import AtProtoClient; client = AtProtoClient(); print('Bluesky client test')"
-
-# Check credentials
-echo $BSKY_USERNAME
-echo $BSKY_PASSWORD
-```
-
-#### Solutions
-
-1. **Invalid Credentials**
-   ```bash
-   # Verify credentials in Bluesky
-   # Update configuration
-   nano config.yaml
-   ```
-
-2. **App Password Issues**
-   ```bash
-   # Generate new app password
-   # Update configuration
-   nano config.yaml
-   ```
-
-3. **PDS Issues**
-   ```bash
-   # Check PDS connectivity
-   ping bsky.social
-   
-   # Try different PDS
-   # Update pds_uri in config
-   ```
-
-### X (Twitter) API Problems
-
-#### Symptoms
-- X API calls fail
-- OAuth errors
-- Tweet posting failures
-
-#### Diagnosis
-```bash
-# Test X connection
-python -c "from x import XClient; client = XClient(); print('X client test')"
-
-# Check OAuth tokens
-echo $X_CONSUMER_KEY
-echo $X_ACCESS_TOKEN
-```
-
-#### Solutions
-
-1. **OAuth Token Issues**
-   ```bash
-   # Regenerate OAuth tokens
-   # Update configuration
-   nano config.yaml
-   ```
-
-2. **App Permissions**
-   ```bash
-   # Check app permissions in X Developer Portal
-   # Ensure "Read and write" permissions
-   ```
-
-3. **Rate Limiting**
-   ```bash
-   # Check rate limit status
-   # Implement backoff (already handled in code)
-   ```
 
 ## Performance Issues
 
 ### High Memory Usage
 
-#### Symptoms
-- High memory consumption
-- System slowdown
-- Out of memory errors
+**Error**: `Memory usage too high`
 
-#### Diagnosis
+**Solutions**:
 ```bash
-# Check memory usage
-free -h
-ps aux --sort=-%mem | head -10
+# Monitor memory usage
+python scripts/memory_monitor.py
 
-# Check Python memory usage
-python -c "import psutil; print(f'Memory usage: {psutil.virtual_memory().percent}%')"
+# Clean up memory
+python scripts/memory_cleanup.py
+
+# Optimize memory settings
+# Edit config.yaml:
+agent:
+  capabilities:
+    max_steps: 50  # Reduce max steps
 ```
 
-#### Solutions
+### Slow Response Times
 
-1. **Memory Leaks**
-   ```bash
-   # Restart services
-   sudo systemctl restart void-bsky.service
-   
-   # Check for memory leaks
-   python -c "import gc; gc.collect(); print('Garbage collection')"
-   ```
+**Error**: `Response times too slow`
 
-2. **Large Queues**
-   ```bash
-   # Check queue size
-   python queue_manager.py stats
-   
-   # Process backlog
-   python -c "from bsky import load_and_process_queued_notifications; load_and_process_queued_notifications()"
-   ```
+**Solutions**:
+```bash
+# Profile performance
+python -m cProfile platforms/bluesky/orchestrator.py
 
-3. **Large Memory Blocks**
-   ```bash
-   # Check memory block sizes
-   python -c "from letta import Letta; client = Letta(token='your-token'); blocks = client.agents.blocks.list(agent_id='your-agent-id'); print([b.size for b in blocks])"
-   ```
+# Check network latency
+ping bsky.social
+ping api.letta.com
+
+# Optimize configuration
+# Edit config.yaml:
+letta:
+  timeout: 30  # Reduce timeout
+```
 
 ### High CPU Usage
 
-#### Symptoms
-- High CPU consumption
-- System slowdown
-- Process hanging
+**Error**: `CPU usage too high`
 
-#### Diagnosis
+**Solutions**:
 ```bash
 # Check CPU usage
-top
 htop
+top
 
-# Check Python processes
-ps aux | grep python
+# Profile CPU usage
+python -m py-spy top --pid $(pgrep -f "python.*orchestrator")
+
+# Optimize processing
+# Edit config.yaml:
+bot:
+  fetch_notifications_delay: 10  # Increase delay
+  max_processed_notifications: 25  # Reduce batch size
 ```
 
-#### Solutions
+## Error Messages
 
-1. **Infinite Loops**
-   ```bash
-   # Check for hanging processes
-   ps aux | grep python
-   
-   # Kill hanging processes
-   pkill -f bsky.py
-   ```
+### Common Error Messages
 
-2. **Heavy Processing**
-   ```bash
-   # Check queue processing
-   python queue_manager.py stats
-   
-   # Optimize processing
-   # Already optimized with retry logic and error handling
-   ```
+#### Configuration Errors
 
-3. **Resource Contention**
-   ```bash
-   # Check system resources
-   iostat -x 1
-   
-   # Optimize resource usage
-   # Already optimized with efficient data structures
-   ```
+```
+ConfigurationError: Missing required field 'platforms.bluesky.username'
+```
+**Solution**: Add missing field to config.yaml
 
-## Network Issues
+```
+ConfigurationError: Invalid log level 'INVALID_LEVEL'
+```
+**Solution**: Use valid log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
-### Connectivity Problems
+```
+ConfigurationError: Invalid platform 'invalid_platform'
+```
+**Solution**: Use valid platform (bluesky, x, discord)
 
-#### Symptoms
-- Network timeouts
-- Connection refused
-- DNS resolution failures
+#### Platform Errors
 
-#### Diagnosis
+```
+PlatformError: Authentication failed for Bluesky
+```
+**Solution**: Check username and password
+
+```
+PlatformError: Rate limit exceeded for X API
+```
+**Solution**: Implement rate limiting or reduce frequency
+
+```
+PlatformError: Discord bot token invalid
+```
+**Solution**: Check bot token and permissions
+
+#### Memory Errors
+
+```
+MemoryError: Failed to create memory block
+```
+**Solution**: Check Letta connection and permissions
+
+```
+MemoryError: Memory search failed
+```
+**Solution**: Rebuild memory index
+
+#### Queue Errors
+
+```
+QueueError: Queue file corrupted
+```
+**Solution**: Repair or reset queue
+
+```
+QueueError: Processing stuck
+```
+**Solution**: Clear stuck notifications
+
+### Error Recovery
+
+#### Automatic Recovery
+
+Sanctum Social includes automatic error recovery:
+
+```python
+# Retry with exponential backoff
+@retry_with_backoff(max_retries=3)
+def api_call():
+    return external_api.call()
+
+# Fallback strategies
+def post_with_fallback(text: str, platform: str):
+    try:
+        return post_to_primary_platform(text, platform)
+    except PrimaryPlatformError:
+        return post_to_fallback_platform(text, platform)
+```
+
+#### Manual Recovery
+
+```bash
+# Restart services
+sudo supervisorctl restart sanctum-bluesky
+sudo supervisorctl restart sanctum-x
+sudo supervisorctl restart sanctum-discord
+
+# Clear error queues
+python scripts/queue_manager.py clear-errors
+
+# Reset configuration
+cp config/agent.yaml config.yaml
+```
+
+## Debugging Tools
+
+### Debug Mode
+
+Enable debug mode for detailed logging:
+
+```bash
+# Set debug environment variable
+export LOG_LEVEL=DEBUG
+
+# Run with debug output
+python platforms/bluesky/orchestrator.py --debug
+```
+
+### Log Analysis
+
+```bash
+# Search for errors
+grep -i error logs/sanctum-social.log
+
+# Search for specific patterns
+grep "Authentication failed" logs/sanctum-social.log
+
+# Monitor logs in real-time
+tail -f logs/sanctum-social.log
+```
+
+### Performance Profiling
+
+```bash
+# CPU profiling
+python -m cProfile platforms/bluesky/orchestrator.py
+
+# Memory profiling
+python -m memory_profiler platforms/bluesky/orchestrator.py
+
+# Line-by-line profiling
+python -m line_profiler platforms/bluesky/orchestrator.py
+```
+
+### Network Debugging
+
 ```bash
 # Test network connectivity
-ping google.com
-ping app.letta.com
-ping bsky.social
+curl -I https://bsky.social
+curl -I https://api.letta.com
 
 # Check DNS resolution
-nslookup app.letta.com
 nslookup bsky.social
+nslookup api.letta.com
+
+# Monitor network traffic
+tcpdump -i any host bsky.social
 ```
-
-#### Solutions
-
-1. **DNS Issues**
-   ```bash
-   # Check DNS configuration
-   cat /etc/resolv.conf
-   
-   # Use different DNS servers
-   echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf
-   ```
-
-2. **Firewall Issues**
-   ```bash
-   # Check firewall status
-   sudo ufw status
-   
-   # Allow necessary ports
-   sudo ufw allow 443
-   sudo ufw allow 80
-   ```
-
-3. **Proxy Issues**
-   ```bash
-   # Check proxy settings
-   echo $HTTP_PROXY
-   echo $HTTPS_PROXY
-   
-   # Configure proxy if needed
-   export HTTP_PROXY="http://proxy:port"
-   export HTTPS_PROXY="http://proxy:port"
-   ```
-
-## Log Analysis
-
-### Understanding Logs
-
-#### Systemd Logs
-```bash
-# View recent logs
-sudo journalctl -u void-bsky.service --since "1 hour ago"
-
-# Follow logs in real-time
-sudo journalctl -u void-bsky.service -f
-
-# View logs with timestamps
-sudo journalctl -u void-bsky.service --since "1 hour ago" --no-pager
-```
-
-#### Application Logs
-```bash
-# Check for error patterns
-grep -r "ERROR" logs/
-grep -r "CRITICAL" logs/
-
-# Check for specific errors
-grep -r "ConnectionError" logs/
-grep -r "TimeoutError" logs/
-```
-
-### Log Patterns
-
-#### Common Error Patterns
-- **ConnectionError**: Network connectivity issues
-- **TimeoutError**: API timeout issues
-- **PermissionError**: File permission issues
-- **ValueError**: Configuration or data validation issues
-- **ImportError**: Missing dependencies
-
-#### Success Patterns
-- **"Processing notification"**: Normal operation
-- **"Queue health: OK"**: Healthy queue status
-- **"Session saved"**: Successful session management
 
 ## Recovery Procedures
 
-### Complete System Recovery
+### Complete System Reset
 
-If all else fails, follow this complete recovery procedure:
+If all else fails, perform a complete system reset:
 
-1. **Stop Services**
-   ```bash
-   sudo systemctl stop void-bsky.service
-   sudo systemctl stop void-x.service
-   ```
+```bash
+# Backup current configuration
+cp config.yaml config.yaml.backup
 
-2. **Backup Data**
-   ```bash
-   tar -czf recovery-backup-$(date +%Y%m%d_%H%M%S).tar.gz \
-       config.yaml data/agent/ data/queues/bluesky/ data/queues/x/ data/cache/x/
-   ```
+# Reset configuration
+cp config/agent.yaml config.yaml
 
-3. **Clean Environment**
-   ```bash
-   # Remove corrupted files
-   rm -rf sessions/*.json
-   rm -rf data/queues/bluesky/*.json
-   rm -rf data/queues/x/*.json
-   
-   # Clean up old logs
-   find logs/ -name "*.log" -mtime +7 -delete
-   ```
+# Clear all data
+rm -rf data/queues/*
+rm -rf data/cache/*
+rm -rf data/agent/*
 
-4. **Reinstall Dependencies**
-   ```bash
-   source venv/bin/activate
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
+# Clear logs
+rm -rf logs/*
 
-5. **Repair Queues**
-   ```bash
-   python queue_manager.py repair
-   ```
+# Restart services
+sudo supervisorctl restart all
+```
 
-6. **Test Configuration**
-   ```bash
-   python test_config.py
-   ```
+### Partial Recovery
 
-7. **Restart Services**
-   ```bash
-   sudo systemctl start void-bsky.service
-   sudo systemctl start void-x.service
-   ```
+For specific component recovery:
 
-8. **Verify Operation**
-   ```bash
-   sudo systemctl status void-bsky.service
-   python queue_manager.py health
-   ```
+```bash
+# Reset memory system
+python scripts/memory_reset.py
+
+# Reset queue system
+python scripts/queue_manager.py reset
+
+# Reset session system
+python scripts/session_reset.py
+
+# Re-register tools
+python scripts/register_tools.py
+```
+
+### Data Recovery
+
+```bash
+# Restore from backup
+cp config.yaml.backup config.yaml
+
+# Restore data from backup
+tar -xzf backup/data_20241219.tar.gz -C data/
+
+# Restore logs from backup
+tar -xzf backup/logs_20241219.tar.gz -C logs/
+```
+
+## Getting Help
+
+### Documentation
+
+- **README.md**: Quick start guide
+- **docs/API.md**: API documentation
+- **docs/CONFIG.md**: Configuration guide
+- **docs/DEPLOYMENT.md**: Deployment guide
+- **docs/ARCHITECTURE.md**: Architecture overview
+
+### Community Support
+
+- **GitHub Issues**: Report bugs and request features
+- **GitHub Discussions**: Ask questions and share solutions
+- **Discord Community**: Real-time chat support
+
+### Professional Support
+
+For enterprise support and consulting:
+
+- **Email**: support@sanctum-social.com
+- **Documentation**: https://docs.sanctum-social.com
+- **Status Page**: https://status.sanctum-social.com
+
+### Reporting Issues
+
+When reporting issues, include:
+
+1. **Error Message**: Complete error message
+2. **Configuration**: Relevant configuration sections
+3. **Logs**: Relevant log entries
+4. **Environment**: OS, Python version, Sanctum Social version
+5. **Steps to Reproduce**: Detailed steps to reproduce the issue
+
+### Issue Template
+
+```markdown
+**Describe the issue**
+A clear description of what the issue is.
+
+**To Reproduce**
+Steps to reproduce the behavior.
+
+**Expected behavior**
+What you expected to happen.
+
+**Environment**
+- OS: [e.g., Ubuntu 20.04]
+- Python version: [e.g., 3.9.7]
+- Sanctum Social version: [e.g., 2.0.0]
+- Platform: [e.g., Bluesky, X, Discord]
+
+**Configuration**
+Relevant configuration sections.
+
+**Logs**
+Relevant log entries.
+
+**Additional context**
+Any other context about the problem.
+```
+
+---
 
 ## Prevention
 
 ### Best Practices
 
-1. **Regular Monitoring**
-   - Set up monitoring scripts
-   - Check logs regularly
-   - Monitor system resources
+1. **Regular Backups**: Backup configuration and data regularly
+2. **Monitoring**: Set up monitoring and alerting
+3. **Testing**: Test changes in development environment
+4. **Documentation**: Document custom configurations
+5. **Updates**: Keep system and dependencies updated
 
-2. **Regular Maintenance**
-   - Clean up old files
-   - Update dependencies
-   - Backup configuration
+### Maintenance
 
-3. **Proper Configuration**
-   - Use environment variables
-   - Secure file permissions
-   - Validate configuration
+1. **Regular Cleanup**: Clean up old logs and data
+2. **Health Checks**: Run health checks regularly
+3. **Performance Monitoring**: Monitor system performance
+4. **Security Updates**: Apply security updates promptly
+5. **Configuration Review**: Review configuration periodically
 
-4. **Resource Management**
-   - Monitor memory usage
-   - Clean up queues regularly
-   - Optimize performance
-
----
-
-*This troubleshooting guide reflects my current architecture and capabilities. I am designed for high-efficiency information transfer, prioritizing clarity and accuracy in problem resolution.*
+This troubleshooting guide provides comprehensive solutions for common issues. For additional help, consult the documentation or contact support.
